@@ -1,5 +1,7 @@
 package hms;
 
+import hms.controller.PatientController;
+import hms.repository.PatientRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
 
@@ -11,55 +13,69 @@ import java.util.List;
 import java.util.Map;
 
 public class Main {
-	public static void main(String[] args) {
-		SwingUtilities.invokeLater(() -> {
-			MainFrame mainFrame = new MainFrame();
-			mainFrame.setVisible(true);
+  public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> {
+      try {
+        Path dataDirectory = Path.of(System.getProperty("user.dir")).resolve("data");
 
-			try {
-				Map<String, Integer> recordCountsByFile = loadAllCsvRecordCounts();
-				String statusText = buildStatusText(recordCountsByFile);
-				mainFrame.setStatusText(statusText);
-			} catch (RuntimeException exception) {
-				mainFrame.setStatusText("Failed loading CSV files");
-				JOptionPane.showMessageDialog(mainFrame, exception.getMessage(), "Startup error",
-						JOptionPane.ERROR_MESSAGE);
-			}
-		});
-	}
+        PatientRepository patientRepository = new PatientRepository();
+        patientRepository.load(dataDirectory.resolve("patients.csv").toString());
 
-	private static Map<String, Integer> loadAllCsvRecordCounts() {
-		Path dataDirectory = Path.of(System.getProperty("user.dir")).resolve("data");
+        PatientController patientController = new PatientController(patientRepository);
 
-		Map<String, String> labelsByFileName = new LinkedHashMap<>();
-		labelsByFileName.put("patients", "patients.csv");
-		labelsByFileName.put("clinicians", "clinicians.csv");
-		labelsByFileName.put("facilities", "facilities.csv");
-		labelsByFileName.put("appointments", "appointments.csv");
-		labelsByFileName.put("prescriptions", "prescriptions.csv");
-		labelsByFileName.put("referrals", "referrals.csv");
-		labelsByFileName.put("staff", "staff.csv");
+        MainFrame mainFrame = new MainFrame(patientController);
+        mainFrame.setVisible(true);
 
-		Map<String, Integer> countsByLabel = new LinkedHashMap<>();
-		for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
-			String label = entry.getKey();
-			String fileName = entry.getValue();
-			String filePath = dataDirectory.resolve(fileName).toString();
+        Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(dataDirectory, patientRepository.findAll().size());
+        String statusText = buildStatusText(recordCountsByLabel);
+        mainFrame.setStatusText(statusText);
+      } catch (RuntimeException exception) {
+        MainFrame mainFrame = new MainFrame(new PatientController(new PatientRepository()));
+        mainFrame.setVisible(true);
+        mainFrame.setStatusText("Failed loading CSV files");
 
-			List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
-			countsByLabel.put(label, rows.size());
-		}
+        JOptionPane.showMessageDialog(
+            mainFrame,
+            exception.getMessage(),
+            "Startup error",
+            JOptionPane.ERROR_MESSAGE
+        );
+      }
+    });
+  }
 
-		return countsByLabel;
-	}
+  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount) {
+    Map<String, String> labelsByFileName = new LinkedHashMap<>();
+    labelsByFileName.put("clinicians", "clinicians.csv");
+    labelsByFileName.put("facilities", "facilities.csv");
+    labelsByFileName.put("appointments", "appointments.csv");
+    labelsByFileName.put("prescriptions", "prescriptions.csv");
+    labelsByFileName.put("referrals", "referrals.csv");
+    labelsByFileName.put("staff", "staff.csv");
 
-	private static String buildStatusText(Map<String, Integer> countsByLabel) {
-		return "Loaded " + countsByLabel.getOrDefault("patients", 0) + " patients, "
-				+ countsByLabel.getOrDefault("clinicians", 0) + " clinicians, "
-				+ countsByLabel.getOrDefault("facilities", 0) + " facilities, "
-				+ countsByLabel.getOrDefault("appointments", 0) + " appointments, "
-				+ countsByLabel.getOrDefault("prescriptions", 0) + " prescriptions, "
-				+ countsByLabel.getOrDefault("referrals", 0) + " referrals, " + countsByLabel.getOrDefault("staff", 0)
-				+ " staff";
-	}
+    Map<String, Integer> countsByLabel = new LinkedHashMap<>();
+    countsByLabel.put("patients", patientsCount);
+
+    for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
+      String label = entry.getKey();
+      String fileName = entry.getValue();
+      String filePath = dataDirectory.resolve(fileName).toString();
+
+      List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
+      countsByLabel.put(label, rows.size());
+    }
+
+    return countsByLabel;
+  }
+
+  private static String buildStatusText(Map<String, Integer> countsByLabel) {
+    return "Loaded "
+        + countsByLabel.getOrDefault("patients", 0) + " patients, "
+        + countsByLabel.getOrDefault("clinicians", 0) + " clinicians, "
+        + countsByLabel.getOrDefault("facilities", 0) + " facilities, "
+        + countsByLabel.getOrDefault("appointments", 0) + " appointments, "
+        + countsByLabel.getOrDefault("prescriptions", 0) + " prescriptions, "
+        + countsByLabel.getOrDefault("referrals", 0) + " referrals, "
+        + countsByLabel.getOrDefault("staff", 0) + " staff";
+  }
 }
