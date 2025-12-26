@@ -12,61 +12,62 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class CsvFileReader {
-  private CsvFileReader() {}
+	private CsvFileReader() {
+	}
 
-  public static List<Map<String, String>> readRowsAsMaps(String filePath) {
-    Objects.requireNonNull(filePath, "filePath");
+	public static List<Map<String, String>> readRowsAsMaps(String filePath) {
+		Objects.requireNonNull(filePath, "filePath");
 
-    Path path = Path.of(filePath);
-    if (!Files.exists(path)) {
-      throw new IllegalArgumentException("CSV file not found: " + path.toAbsolutePath());
-    }
+		Path path = Path.of(filePath);
+		if (!Files.exists(path)) {
+			throw new IllegalArgumentException("CSV file not found: " + path.toAbsolutePath());
+		}
 
-    try (BufferedReader bufferedReader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-      String headerLine = bufferedReader.readLine();
-      if (headerLine == null) {
-        return List.of();
-      }
+		try (BufferedReader bufferedReader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+			String headerLine = bufferedReader.readLine();
+			if (headerLine == null) {
+				return List.of();
+			}
 
-      String[] headerNames = splitByComma(headerLine);
-      for (int headerIndex = 0; headerIndex < headerNames.length; headerIndex++) {
-        headerNames[headerIndex] = normalizeCellValue(headerNames[headerIndex]);
-      }
+			String[] headerNames = splitByComma(headerLine);
+			for (int headerIndex = 0; headerIndex < headerNames.length; headerIndex++) {
+				headerNames[headerIndex] = normalizeCellValue(headerNames[headerIndex]);
+			}
 
-      List<Map<String, String>> rows = new ArrayList<>();
-      String rowLine;
+			List<Map<String, String>> rows = new ArrayList<>();
+			String rowLine;
 
-      while ((rowLine = bufferedReader.readLine()) != null) {
-        if (rowLine.isBlank()) {
-          continue;
-        }
+			while ((rowLine = bufferedReader.readLine()) != null) {
+				if (rowLine.isBlank()) {
+					continue;
+				}
 
-        String[] rowValues = splitByComma(rowLine);
-        Map<String, String> row = new LinkedHashMap<>();
+				String[] rowValues = splitByComma(rowLine);
+				Map<String, String> row = new LinkedHashMap<>();
 
-        for (int columnIndex = 0; columnIndex < headerNames.length; columnIndex++) {
-          String columnName = headerNames[columnIndex];
-          String rawValue = columnIndex < rowValues.length ? rowValues[columnIndex] : "";
-          row.put(columnName, normalizeCellValue(rawValue));
-        }
+				for (int columnIndex = 0; columnIndex < headerNames.length; columnIndex++) {
+					String columnName = headerNames[columnIndex];
+					String rawValue = columnIndex < rowValues.length ? rowValues[columnIndex] : "";
+					row.put(columnName, normalizeCellValue(rawValue));
+				}
 
-        rows.add(row);
-      }
+				rows.add(row);
+			}
 
-      return rows;
-    } catch (IOException exception) {
-      throw new IllegalStateException("Failed reading CSV file: " + path.toAbsolutePath(), exception);
-    }
-  }
+			return rows;
+		} catch (IOException exception) {
+			throw new IllegalStateException("Failed reading CSV file: " + path.toAbsolutePath(), exception);
+		}
+	}
 
-  private static String[] splitByComma(String line) {
-    return line.split(",", -1);
-  }
+	private static String[] splitByComma(String line) {
+		return line.split(",", -1);
+	}
 
-  private static String normalizeCellValue(String value) {
-    if (value == null) {
-      return "";
-    }
-    return value.trim();
-  }
+	private static String normalizeCellValue(String value) {
+		if (value == null) {
+			return "";
+		}
+		return value.trim();
+	}
 }
