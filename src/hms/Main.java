@@ -26,16 +26,18 @@ public class Main {
         patientRepository.load(dataDirectory.resolve("patients.csv").toString());
 
         AppointmentRepository appointmentRepository = new AppointmentRepository();
+        appointmentRepository.load(dataDirectory.resolve("appointments.csv").toString());
 
         PatientController patientController = new PatientController(patientRepository);
-        AppointmentController appointmentController = new AppointmentController(appointmentRepository);
+        AppointmentController appointmentController = new AppointmentController(appointmentRepository, patientRepository);
 
         mainFrame = new MainFrame(patientController, appointmentController);
         mainFrame.setVisible(true);
 
         Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
             dataDirectory,
-            patientRepository.findAll().size()
+            patientRepository.findAll().size(),
+            appointmentRepository.findAll().size()
         );
 
         mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
@@ -54,17 +56,17 @@ public class Main {
     });
   }
 
-  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount) {
+  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount, int appointmentsCount) {
     Map<String, String> labelsByFileName = new LinkedHashMap<>();
     labelsByFileName.put("clinicians", "clinicians.csv");
     labelsByFileName.put("facilities", "facilities.csv");
-    labelsByFileName.put("appointments", "appointments.csv");
     labelsByFileName.put("prescriptions", "prescriptions.csv");
     labelsByFileName.put("referrals", "referrals.csv");
     labelsByFileName.put("staff", "staff.csv");
 
     Map<String, Integer> countsByLabel = new LinkedHashMap<>();
     countsByLabel.put("patients", patientsCount);
+    countsByLabel.put("appointments", appointmentsCount);
 
     for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
       String label = entry.getKey();

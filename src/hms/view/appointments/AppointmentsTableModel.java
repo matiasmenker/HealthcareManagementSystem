@@ -4,13 +4,16 @@ import hms.model.Appointment;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AppointmentsTableModel extends AbstractTableModel {
 
   private final String[] columnNames = new String[] {
       "Appointment ID",
       "Patient ID",
+      "Patient Name",
       "Clinician ID",
       "Facility ID",
       "Date Time",
@@ -19,9 +22,11 @@ public class AppointmentsTableModel extends AbstractTableModel {
   };
 
   private List<Appointment> appointments = new ArrayList<>();
+  private Map<String, String> patientNamesByPatientId = new LinkedHashMap<>();
 
-  public void setAppointments(List<Appointment> appointments) {
+  public void setAppointments(List<Appointment> appointments, Map<String, String> patientNamesByPatientId) {
     this.appointments = appointments == null ? new ArrayList<>() : new ArrayList<>(appointments);
+    this.patientNamesByPatientId = patientNamesByPatientId == null ? new LinkedHashMap<>() : new LinkedHashMap<>(patientNamesByPatientId);
     fireTableDataChanged();
   }
 
@@ -61,18 +66,25 @@ public class AppointmentsTableModel extends AbstractTableModel {
       return appointment.getPatientId();
     }
     if (columnIndex == 2) {
-      return appointment.getClinicianId();
+      String patientId = appointment.getPatientId();
+      if (patientId == null || patientId.trim().isEmpty()) {
+        return "";
+      }
+      return patientNamesByPatientId.getOrDefault(patientId, "");
     }
     if (columnIndex == 3) {
-      return appointment.getFacilityId();
+      return appointment.getClinicianId();
     }
     if (columnIndex == 4) {
-      return appointment.getDateTime();
+      return appointment.getFacilityId();
     }
     if (columnIndex == 5) {
-      return appointment.getStatus() == null ? "" : appointment.getStatus().name();
+      return appointment.getDateTime();
     }
     if (columnIndex == 6) {
+      return appointment.getStatus() == null ? "" : appointment.getStatus().name();
+    }
+    if (columnIndex == 7) {
       return appointment.getReason();
     }
 

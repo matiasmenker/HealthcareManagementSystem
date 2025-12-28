@@ -1,7 +1,9 @@
 package hms.view.appointments;
 
 import hms.controller.AppointmentController;
+import hms.controller.PatientController;
 import hms.model.Appointment;
+import hms.model.Patient;
 import hms.model.enums.AppointmentStatus;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
@@ -24,12 +26,14 @@ import java.util.Objects;
 public class AppointmentsPanel extends JPanel {
 
   private final AppointmentController appointmentController;
+  private final PatientController patientController;
   private final AppointmentsTableModel appointmentsTableModel;
   private final JTable appointmentsTable;
   private final ButtonsActionsBar buttonsActionsBar;
 
-  public AppointmentsPanel(AppointmentController appointmentController) {
+  public AppointmentsPanel(AppointmentController appointmentController, PatientController patientController) {
     this.appointmentController = Objects.requireNonNull(appointmentController, "appointmentController");
+    this.patientController = Objects.requireNonNull(patientController, "patientController");
 
     setLayout(new BorderLayout(10, 10));
     setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -74,11 +78,28 @@ public class AppointmentsPanel extends JPanel {
   private void refreshAppointmentsTable() {
     try {
       List<Appointment> appointments = appointmentController.getAllAppointments();
-      appointmentsTableModel.setAppointments(appointments);
+      Map<String, String> patientNamesByPatientId = buildPatientNamesByPatientId();
+      appointmentsTableModel.setAppointments(appointments, patientNamesByPatientId);
       buttonsActionsBar.setEditEnabled(appointmentsTable.getSelectedRow() >= 0);
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
+  }
+
+  private Map<String, String> buildPatientNamesByPatientId() {
+    Map<String, String> patientNamesByPatientId = new LinkedHashMap<>();
+    List<Patient> patients = patientController.getAllPatients();
+    for (Patient patient : patients) {
+      if (patient == null) {
+        continue;
+      }
+      String patientId = patient.getId();
+      if (patientId == null || patientId.trim().isEmpty()) {
+        continue;
+      }
+      patientNamesByPatientId.put(patientId, patient.getFullName() == null ? "" : patient.getFullName().trim());
+    }
+    return patientNamesByPatientId;
   }
 
   private void openAddAppointmentDialog() {

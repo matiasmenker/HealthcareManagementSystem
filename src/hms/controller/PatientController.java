@@ -18,6 +18,19 @@ public class PatientController {
     return patientRepository.findAll();
   }
 
+  public Patient getPatientById(String patientId) {
+    if (patientId == null || patientId.trim().isEmpty()) {
+      throw new IllegalArgumentException("Patient id is required");
+    }
+
+    Patient patient = patientRepository.findById(patientId);
+    if (patient == null) {
+      throw new IllegalArgumentException("Patient not found: " + patientId);
+    }
+
+    return patient;
+  }
+
   public void addPatient(Patient patient) {
     validatePatient(patient);
     patientRepository.add(patient);

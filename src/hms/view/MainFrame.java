@@ -31,7 +31,7 @@ public class MainFrame extends JFrame {
     JTabbedPane tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Patients", new PatientsPanel(patientController));
     tabbedPane.addTab("Clinicians", new JLabel("Clinicians screen not implemented yet"));
-    tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController));
+    tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController));
     tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
     tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));
     tabbedPane.addTab("Facilities", new JLabel("Facilities screen not implemented yet"));
