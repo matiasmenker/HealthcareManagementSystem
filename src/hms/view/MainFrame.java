@@ -1,8 +1,10 @@
 package hms.view;
 
 import hms.controller.AppointmentController;
+import hms.controller.ClinicianController;
 import hms.controller.PatientController;
 import hms.view.appointments.AppointmentsPanel;
+import hms.view.clinicians.CliniciansPanel;
 import hms.view.patients.PatientsPanel;
 
 import javax.swing.JFrame;
@@ -16,8 +18,11 @@ public class MainFrame extends JFrame {
 
   private final JLabel statusBarLabel;
 
-  public MainFrame(PatientController patientController, AppointmentController appointmentController) {
+  public MainFrame(PatientController patientController,
+                   ClinicianController clinicianController,
+                   AppointmentController appointmentController) {
     Objects.requireNonNull(patientController, "patientController");
+    Objects.requireNonNull(clinicianController, "clinicianController");
     Objects.requireNonNull(appointmentController, "appointmentController");
 
     setTitle("Healthcare Management System");
@@ -30,7 +35,7 @@ public class MainFrame extends JFrame {
 
     JTabbedPane tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Patients", new PatientsPanel(patientController));
-    tabbedPane.addTab("Clinicians", new JLabel("Clinicians screen not implemented yet"));
+    tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController));
     tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController));
     tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
     tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));

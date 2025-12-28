@@ -1,8 +1,10 @@
 package hms;
 
 import hms.controller.AppointmentController;
+import hms.controller.ClinicianController;
 import hms.controller.PatientController;
 import hms.repository.AppointmentRepository;
+import hms.repository.ClinicianRepository;
 import hms.repository.PatientRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
@@ -25,18 +27,23 @@ public class Main {
         PatientRepository patientRepository = new PatientRepository();
         patientRepository.load(dataDirectory.resolve("patients.csv").toString());
 
+        ClinicianRepository clinicianRepository = new ClinicianRepository();
+        clinicianRepository.load(dataDirectory.resolve("clinicians.csv").toString());
+
         AppointmentRepository appointmentRepository = new AppointmentRepository();
         appointmentRepository.load(dataDirectory.resolve("appointments.csv").toString());
 
         PatientController patientController = new PatientController(patientRepository);
+        ClinicianController clinicianController = new ClinicianController(clinicianRepository);
         AppointmentController appointmentController = new AppointmentController(appointmentRepository, patientRepository);
 
-        mainFrame = new MainFrame(patientController, appointmentController);
+        mainFrame = new MainFrame(patientController, clinicianController, appointmentController);
         mainFrame.setVisible(true);
 
         Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
             dataDirectory,
             patientRepository.findAll().size(),
+            clinicianRepository.findAll().size(),
             appointmentRepository.findAll().size()
         );
 
@@ -56,9 +63,11 @@ public class Main {
     });
   }
 
-  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount, int appointmentsCount) {
+  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory,
+                                                             int patientsCount,
+                                                             int cliniciansCount,
+                                                             int appointmentsCount) {
     Map<String, String> labelsByFileName = new LinkedHashMap<>();
-    labelsByFileName.put("clinicians", "clinicians.csv");
     labelsByFileName.put("facilities", "facilities.csv");
     labelsByFileName.put("prescriptions", "prescriptions.csv");
     labelsByFileName.put("referrals", "referrals.csv");
@@ -66,6 +75,7 @@ public class Main {
 
     Map<String, Integer> countsByLabel = new LinkedHashMap<>();
     countsByLabel.put("patients", patientsCount);
+    countsByLabel.put("clinicians", cliniciansCount);
     countsByLabel.put("appointments", appointmentsCount);
 
     for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
