@@ -1,6 +1,8 @@
 package hms;
 
+import hms.controller.AppointmentController;
 import hms.controller.PatientController;
+import hms.repository.AppointmentRepository;
 import hms.repository.PatientRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
@@ -15,24 +17,32 @@ import java.util.Map;
 public class Main {
   public static void main(String[] args) {
     SwingUtilities.invokeLater(() -> {
+      MainFrame mainFrame = null;
+
       try {
         Path dataDirectory = Path.of(System.getProperty("user.dir")).resolve("data");
 
         PatientRepository patientRepository = new PatientRepository();
         patientRepository.load(dataDirectory.resolve("patients.csv").toString());
 
+        AppointmentRepository appointmentRepository = new AppointmentRepository();
+
         PatientController patientController = new PatientController(patientRepository);
+        AppointmentController appointmentController = new AppointmentController(appointmentRepository);
 
-        MainFrame mainFrame = new MainFrame(patientController);
+        mainFrame = new MainFrame(patientController, appointmentController);
         mainFrame.setVisible(true);
 
-        Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(dataDirectory, patientRepository.findAll().size());
-        String statusText = buildStatusText(recordCountsByLabel);
-        mainFrame.setStatusText(statusText);
+        Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
+            dataDirectory,
+            patientRepository.findAll().size()
+        );
+
+        mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
       } catch (RuntimeException exception) {
-        MainFrame mainFrame = new MainFrame(new PatientController(new PatientRepository()));
-        mainFrame.setVisible(true);
-        mainFrame.setStatusText("Failed loading CSV files");
+        if (mainFrame != null) {
+          mainFrame.setStatusText("Failed loading CSV files");
+        }
 
         JOptionPane.showMessageDialog(
             mainFrame,
