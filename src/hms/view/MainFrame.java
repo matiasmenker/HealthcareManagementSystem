@@ -20,41 +20,39 @@ import java.util.Objects;
 
 public class MainFrame extends JFrame {
 
-  private final JLabel statusBarLabel;
+	private final JLabel statusBarLabel;
 
-  public MainFrame(PatientController patientController,
-                   ClinicianController clinicianController,
-                   AppointmentController appointmentController,
-                   FacilityController facilityController,
-                   StaffController staffController) {
-    Objects.requireNonNull(patientController, "patientController");
-    Objects.requireNonNull(clinicianController, "clinicianController");
-    Objects.requireNonNull(appointmentController, "appointmentController");
-    Objects.requireNonNull(facilityController, "facilityController");
-    Objects.requireNonNull(staffController, "staffController");
+	public MainFrame(PatientController patientController, ClinicianController clinicianController,
+			AppointmentController appointmentController, FacilityController facilityController,
+			StaffController staffController) {
+		Objects.requireNonNull(patientController, "patientController");
+		Objects.requireNonNull(clinicianController, "clinicianController");
+		Objects.requireNonNull(appointmentController, "appointmentController");
+		Objects.requireNonNull(facilityController, "facilityController");
+		Objects.requireNonNull(staffController, "staffController");
 
-    setTitle("Healthcare Management System");
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setSize(1100, 650);
-    setLocationRelativeTo(null);
-    setLayout(new BorderLayout());
+		setTitle("Healthcare Management System");
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setSize(1100, 650);
+		setLocationRelativeTo(null);
+		setLayout(new BorderLayout());
 
-    statusBarLabel = new JLabel("Ready", SwingConstants.LEFT);
+		statusBarLabel = new JLabel("Ready", SwingConstants.LEFT);
 
-    JTabbedPane tabbedPane = new JTabbedPane();
-    tabbedPane.addTab("Patients", new PatientsPanel(patientController));
-    tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController));
-    tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController));
-    tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
-    tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));
-    tabbedPane.addTab("Facilities", new FacilitiesPanel(facilityController));
-    tabbedPane.addTab("Staff", new StaffPanel(staffController));
+		JTabbedPane tabbedPane = new JTabbedPane();
+		tabbedPane.addTab("Patients", new PatientsPanel(patientController));
+		tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController));
+		tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController));
+		tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
+		tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));
+		tabbedPane.addTab("Facilities", new FacilitiesPanel(facilityController));
+		tabbedPane.addTab("Staff", new StaffPanel(staffController));
 
-    add(tabbedPane, BorderLayout.CENTER);
-    add(statusBarLabel, BorderLayout.SOUTH);
-  }
+		add(tabbedPane, BorderLayout.CENTER);
+		add(statusBarLabel, BorderLayout.SOUTH);
+	}
 
-  public void setStatusText(String text) {
-    statusBarLabel.setText(text);
-  }
+	public void setStatusText(String text) {
+		statusBarLabel.setText(text);
+	}
 }

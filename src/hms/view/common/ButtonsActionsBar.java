@@ -6,33 +6,35 @@ import java.awt.FlowLayout;
 
 public class ButtonsActionsBar extends JPanel {
 
-  public interface Actions {
-    void onAdd();
-    void onEdit();
-    void onRefresh();
-  }
+	public interface Actions {
+		void onAdd();
 
-  private final JButton addButton;
-  private final JButton editButton;
-  private final JButton refreshButton;
+		void onEdit();
 
-  public ButtonsActionsBar(Actions actions) {
-    setLayout(new FlowLayout(FlowLayout.LEFT));
+		void onRefresh();
+	}
 
-    addButton = new JButton("Add");
-    editButton = new JButton("Edit");
-    refreshButton = new JButton("Refresh");
+	private final JButton addButton;
+	private final JButton editButton;
+	private final JButton refreshButton;
 
-    addButton.addActionListener(e -> actions.onAdd());
-    editButton.addActionListener(e -> actions.onEdit());
-    refreshButton.addActionListener(e -> actions.onRefresh());
+	public ButtonsActionsBar(Actions actions) {
+		setLayout(new FlowLayout(FlowLayout.LEFT));
 
-    add(addButton);
-    add(editButton);
-    add(refreshButton);
-  }
+		addButton = new JButton("Add");
+		editButton = new JButton("Edit");
+		refreshButton = new JButton("Refresh");
 
-  public void setEditEnabled(boolean enabled) {
-    editButton.setEnabled(enabled);
-  }
+		addButton.addActionListener(e -> actions.onAdd());
+		editButton.addActionListener(e -> actions.onEdit());
+		refreshButton.addActionListener(e -> actions.onRefresh());
+
+		add(addButton);
+		add(editButton);
+		add(refreshButton);
+	}
+
+	public void setEditEnabled(boolean enabled) {
+		editButton.setEnabled(enabled);
+	}
 }

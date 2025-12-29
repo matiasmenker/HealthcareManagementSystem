@@ -10,43 +10,43 @@ import java.util.Objects;
 
 public class AppointmentController {
 
-  private final AppointmentRepository appointmentRepository;
-  private final PatientRepository patientRepository;
+	private final AppointmentRepository appointmentRepository;
+	private final PatientRepository patientRepository;
 
-  public AppointmentController(AppointmentRepository appointmentRepository, PatientRepository patientRepository) {
-    this.appointmentRepository = Objects.requireNonNull(appointmentRepository, "appointmentRepository");
-    this.patientRepository = Objects.requireNonNull(patientRepository, "patientRepository");
-  }
+	public AppointmentController(AppointmentRepository appointmentRepository, PatientRepository patientRepository) {
+		this.appointmentRepository = Objects.requireNonNull(appointmentRepository, "appointmentRepository");
+		this.patientRepository = Objects.requireNonNull(patientRepository, "patientRepository");
+	}
 
-  public void loadAppointmentsFromCsv(String filePath) {
-    appointmentRepository.load(filePath);
-  }
+	public void loadAppointmentsFromCsv(String filePath) {
+		appointmentRepository.load(filePath);
+	}
 
-  public List<Appointment> getAllAppointments() {
-    return appointmentRepository.findAll();
-  }
+	public List<Appointment> getAllAppointments() {
+		return appointmentRepository.findAll();
+	}
 
-  public void addAppointment(Appointment appointment) {
-    Objects.requireNonNull(appointment, "appointment");
-    validateAppointmentReferences(appointment);
-    appointmentRepository.add(appointment);
-  }
+	public void addAppointment(Appointment appointment) {
+		Objects.requireNonNull(appointment, "appointment");
+		validateAppointmentReferences(appointment);
+		appointmentRepository.add(appointment);
+	}
 
-  public void updateAppointment(Appointment appointment) {
-    Objects.requireNonNull(appointment, "appointment");
-    validateAppointmentReferences(appointment);
-    appointmentRepository.update(appointment);
-  }
+	public void updateAppointment(Appointment appointment) {
+		Objects.requireNonNull(appointment, "appointment");
+		validateAppointmentReferences(appointment);
+		appointmentRepository.update(appointment);
+	}
 
-  private void validateAppointmentReferences(Appointment appointment) {
-    String patientId = appointment.getPatientId();
-    if (patientId == null || patientId.trim().isEmpty()) {
-      throw new IllegalArgumentException("Patient id is required");
-    }
+	private void validateAppointmentReferences(Appointment appointment) {
+		String patientId = appointment.getPatientId();
+		if (patientId == null || patientId.trim().isEmpty()) {
+			throw new IllegalArgumentException("Patient id is required");
+		}
 
-    Patient patient = patientRepository.findById(patientId);
-    if (patient == null) {
-      throw new IllegalArgumentException("Patient not found: " + patientId);
-    }
-  }
+		Patient patient = patientRepository.findById(patientId);
+		if (patient == null) {
+			throw new IllegalArgumentException("Patient not found: " + patientId);
+		}
+	}
 }
