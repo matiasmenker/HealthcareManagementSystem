@@ -4,10 +4,12 @@ import hms.controller.AppointmentController;
 import hms.controller.ClinicianController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.controller.StaffController;
 import hms.view.appointments.AppointmentsPanel;
 import hms.view.clinicians.CliniciansPanel;
 import hms.view.facilities.FacilitiesPanel;
 import hms.view.patients.PatientsPanel;
+import hms.view.staff.StaffPanel;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -23,11 +25,13 @@ public class MainFrame extends JFrame {
   public MainFrame(PatientController patientController,
                    ClinicianController clinicianController,
                    AppointmentController appointmentController,
-                   FacilityController facilityController) {
+                   FacilityController facilityController,
+                   StaffController staffController) {
     Objects.requireNonNull(patientController, "patientController");
     Objects.requireNonNull(clinicianController, "clinicianController");
     Objects.requireNonNull(appointmentController, "appointmentController");
     Objects.requireNonNull(facilityController, "facilityController");
+    Objects.requireNonNull(staffController, "staffController");
 
     setTitle("Healthcare Management System");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -44,7 +48,7 @@ public class MainFrame extends JFrame {
     tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
     tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));
     tabbedPane.addTab("Facilities", new FacilitiesPanel(facilityController));
-    tabbedPane.addTab("Staff", new JLabel("Staff screen not implemented yet"));
+    tabbedPane.addTab("Staff", new StaffPanel(staffController));
 
     add(tabbedPane, BorderLayout.CENTER);
     add(statusBarLabel, BorderLayout.SOUTH);

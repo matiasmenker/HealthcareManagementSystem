@@ -4,10 +4,12 @@ import hms.controller.AppointmentController;
 import hms.controller.ClinicianController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.controller.StaffController;
 import hms.repository.AppointmentRepository;
 import hms.repository.ClinicianRepository;
 import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
+import hms.repository.StaffRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
 
@@ -38,12 +40,22 @@ public class Main {
         FacilityRepository facilityRepository = new FacilityRepository();
         facilityRepository.load(dataDirectory.resolve("facilities.csv").toString());
 
+        StaffRepository staffRepository = new StaffRepository();
+        staffRepository.load(dataDirectory.resolve("staff.csv").toString());
+
         PatientController patientController = new PatientController(patientRepository);
         ClinicianController clinicianController = new ClinicianController(clinicianRepository);
         AppointmentController appointmentController = new AppointmentController(appointmentRepository, patientRepository);
         FacilityController facilityController = new FacilityController(facilityRepository);
+        StaffController staffController = new StaffController(staffRepository);
 
-        mainFrame = new MainFrame(patientController, clinicianController, appointmentController, facilityController);
+        mainFrame = new MainFrame(
+            patientController,
+            clinicianController,
+            appointmentController,
+            facilityController,
+            staffController
+        );
         mainFrame.setVisible(true);
 
         Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
@@ -51,7 +63,8 @@ public class Main {
             patientRepository.findAll().size(),
             clinicianRepository.findAll().size(),
             appointmentRepository.findAll().size(),
-            facilityRepository.findAll().size()
+            facilityRepository.findAll().size(),
+            staffRepository.findAll().size()
         );
 
         mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
@@ -74,17 +87,18 @@ public class Main {
                                                              int patientsCount,
                                                              int cliniciansCount,
                                                              int appointmentsCount,
-                                                             int facilitiesCount) {
+                                                             int facilitiesCount,
+                                                             int staffCount) {
     Map<String, String> labelsByFileName = new LinkedHashMap<>();
     labelsByFileName.put("prescriptions", "prescriptions.csv");
     labelsByFileName.put("referrals", "referrals.csv");
-    labelsByFileName.put("staff", "staff.csv");
 
     Map<String, Integer> countsByLabel = new LinkedHashMap<>();
     countsByLabel.put("patients", patientsCount);
     countsByLabel.put("clinicians", cliniciansCount);
     countsByLabel.put("appointments", appointmentsCount);
     countsByLabel.put("facilities", facilitiesCount);
+    countsByLabel.put("staff", staffCount);
 
     for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
       String label = entry.getKey();
