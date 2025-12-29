@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class ClinicianRepository {
+public class ClinicianRepository extends BaseRepository {
 
   private final List<Clinician> clinicians = new ArrayList<>();
   private final Map<String, Clinician> cliniciansById = new LinkedHashMap<>();
@@ -111,13 +111,5 @@ public class ClinicianRepository {
         employmentStatus,
         startDate
     );
-  }
-
-  private String value(Map<String, String> row, String key) {
-    if (row == null || key == null) {
-      return "";
-    }
-    String v = row.get(key);
-    return v == null ? "" : v.trim();
   }
 }

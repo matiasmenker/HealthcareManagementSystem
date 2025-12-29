@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class AppointmentRepository {
+public class AppointmentRepository extends BaseRepository {
 
   private final List<Appointment> appointments = new ArrayList<>();
   private final Map<String, Appointment> appointmentsById = new LinkedHashMap<>();
@@ -123,11 +123,5 @@ public class AppointmentRepository {
     }
   }
 
-  private String value(Map<String, String> row, String key) {
-    if (row == null || key == null) {
-      return "";
-    }
-    String v = row.get(key);
-    return v == null ? "" : v.trim();
-  }
+
 }
