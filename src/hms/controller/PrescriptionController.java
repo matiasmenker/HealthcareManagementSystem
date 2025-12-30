@@ -8,7 +8,6 @@ import hms.repository.ClinicianRepository;
 import hms.repository.PatientRepository;
 import hms.repository.PrescriptionRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,78 +29,44 @@ public class PrescriptionController {
   }
 
   public List<Prescription> getAllPrescriptions() {
-    return new ArrayList<>(prescriptionRepository.findAll());
+    return prescriptionRepository.findAll();
   }
 
   public void addPrescription(Prescription prescription) {
-    addPrescriptionAndGenerateOutput(prescription);
-  }
-
-  public String addPrescriptionAndGenerateOutput(Prescription prescription) {
-    validatePrescriptionForCreateOrUpdate(prescription);
-
-    Patient patient = findPatientById(prescription.getPatientId());
-    if (patient == null) {
-      throw new IllegalArgumentException("Patient not found: " + safe(prescription.getPatientId()));
-    }
-
-    Clinician clinician = clinicianRepository.findById(prescription.getClinicianId());
-    if (clinician == null) {
-      throw new IllegalArgumentException("Clinician not found: " + safe(prescription.getClinicianId()));
-    }
-
+    validatePrescription(prescription);
     prescriptionRepository.add(prescription);
 
-    return prescriptionOutputFileGenerator.generatePrescriptionTextFile(prescription, patient, clinician);
+    Patient patient = patientRepository.findById(prescription.getPatientId());
+    Clinician clinician = clinicianRepository.findById(prescription.getClinicianId());
+
+    if (patient != null && clinician != null) {
+      prescriptionOutputFileGenerator.generatePrescriptionTextFile(prescription, patient, clinician);
+    }
   }
 
   public void updatePrescription(Prescription prescription) {
-    validatePrescriptionForCreateOrUpdate(prescription);
-
-    Patient patient = findPatientById(prescription.getPatientId());
-    if (patient == null) {
-      throw new IllegalArgumentException("Patient not found: " + safe(prescription.getPatientId()));
-    }
-
-    Clinician clinician = clinicianRepository.findById(prescription.getClinicianId());
-    if (clinician == null) {
-      throw new IllegalArgumentException("Clinician not found: " + safe(prescription.getClinicianId()));
-    }
-
+    validatePrescription(prescription);
     prescriptionRepository.update(prescription);
   }
 
-  private Patient findPatientById(String patientId) {
-    String normalizedPatientId = safe(patientId);
-    if (normalizedPatientId.isEmpty()) {
-      return null;
+  public void deletePrescription(String prescriptionId) {
+    if (isBlank(prescriptionId)) {
+      throw new IllegalArgumentException("Prescription id is required");
     }
-
-    List<Patient> patients = patientRepository.findAll();
-    for (Patient patient : patients) {
-      if (patient == null) {
-        continue;
-      }
-      if (normalizedPatientId.equals(safe(patient.getId()))) {
-        return patient;
-      }
-    }
-
-    return null;
+    prescriptionRepository.delete(prescriptionId);
   }
 
-  private void validatePrescriptionForCreateOrUpdate(Prescription prescription) {
-    if (prescription == null) {
-      throw new IllegalArgumentException("Prescription is required");
-    }
+  private void validatePrescription(Prescription prescription) {
+    Objects.requireNonNull(prescription, "prescription");
+
     if (isBlank(prescription.getId())) {
-      throw new IllegalArgumentException("Prescription ID is required");
+      throw new IllegalArgumentException("Prescription id is required");
     }
     if (isBlank(prescription.getPatientId())) {
-      throw new IllegalArgumentException("Patient is required");
+      throw new IllegalArgumentException("Patient id is required");
     }
     if (isBlank(prescription.getClinicianId())) {
-      throw new IllegalArgumentException("Clinician is required");
+      throw new IllegalArgumentException("Clinician id is required");
     }
     if (isBlank(prescription.getMedication())) {
       throw new IllegalArgumentException("Medication is required");
@@ -116,18 +81,21 @@ public class PrescriptionController {
       throw new IllegalArgumentException("Status is required");
     }
     if (isBlank(prescription.getDateIssued())) {
-      throw new IllegalArgumentException("Date Issued is required");
+      throw new IllegalArgumentException("Date issued is required");
+    }
+
+    Patient patient = patientRepository.findById(prescription.getPatientId());
+    if (patient == null) {
+      throw new IllegalArgumentException("Patient not found: " + prescription.getPatientId());
+    }
+
+    Clinician clinician = clinicianRepository.findById(prescription.getClinicianId());
+    if (clinician == null) {
+      throw new IllegalArgumentException("Clinician not found: " + prescription.getClinicianId());
     }
   }
 
   private boolean isBlank(String value) {
     return value == null || value.trim().isEmpty();
-  }
-
-  private String safe(String value) {
-    if (value == null) {
-      return "";
-    }
-    return value.trim();
   }
 }

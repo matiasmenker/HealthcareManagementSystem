@@ -6,7 +6,6 @@ import hms.controller.PrescriptionController;
 import hms.model.Clinician;
 import hms.model.Patient;
 import hms.model.Prescription;
-import hms.view.MainFrame;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -67,7 +66,10 @@ public class PrescriptionsPanel extends JPanel {
       }
     });
 
+    buttonsActionsBar.setDeleteHandler(this::deleteSelectedPrescription);
+
     buttonsActionsBar.setEditEnabled(false);
+    buttonsActionsBar.setDeleteEnabled(false);
 
     prescriptionsTable.getSelectionModel().addListSelectionListener(event -> {
       if (event.getValueIsAdjusting()) {
@@ -75,6 +77,7 @@ public class PrescriptionsPanel extends JPanel {
       }
       boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
       buttonsActionsBar.setEditEnabled(hasSelection);
+      buttonsActionsBar.setDeleteEnabled(hasSelection);
     });
 
     add(buttonsActionsBar, BorderLayout.NORTH);
@@ -89,7 +92,49 @@ public class PrescriptionsPanel extends JPanel {
       Map<String, String> patientNamesByPatientId = buildPatientNamesByPatientId();
       Map<String, String> clinicianNamesByClinicianId = buildClinicianNamesByClinicianId();
       prescriptionsTableModel.setPrescriptions(prescriptions, patientNamesByPatientId, clinicianNamesByClinicianId);
-      buttonsActionsBar.setEditEnabled(prescriptionsTable.getSelectedRow() >= 0);
+
+      boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
+      buttonsActionsBar.setEditEnabled(hasSelection);
+      buttonsActionsBar.setDeleteEnabled(hasSelection);
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void deleteSelectedPrescription() {
+    int selectedRowIndex = prescriptionsTable.getSelectedRow();
+    if (selectedRowIndex < 0) {
+      JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    Prescription selectedPrescription = prescriptionsTableModel.getPrescriptionAtRow(selectedRowIndex);
+    if (selectedPrescription == null) {
+      JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    String prescriptionId = safe(selectedPrescription.getId());
+    if (prescriptionId.isEmpty()) {
+      JOptionPane.showMessageDialog(this, "Selected prescription has no identifier.", "Delete", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    int choice = JOptionPane.showConfirmDialog(
+        this,
+        "Delete prescription " + prescriptionId + "?",
+        "Confirm delete",
+        JOptionPane.YES_NO_OPTION
+    );
+
+    if (choice != JOptionPane.YES_OPTION) {
+      return;
+    }
+
+    try {
+      prescriptionController.deletePrescription(prescriptionId);
+      refreshPrescriptionsTable();
+      JOptionPane.showMessageDialog(this, "Prescription deleted: " + prescriptionId, "Deleted", JOptionPane.INFORMATION_MESSAGE);
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -133,21 +178,10 @@ public class PrescriptionsPanel extends JPanel {
           valuesByKey.getOrDefault("dateIssued", "")
       );
 
-      String outputFilePath = prescriptionController.addPrescriptionAndGenerateOutput(prescription);
-
+      prescriptionController.addPrescription(prescription);
       refreshPrescriptionsTable();
       selectPrescriptionById(prescription.getId());
-
-      logToApplicationConsole("Generated " + outputFilePath);
-
-      JOptionPane.showMessageDialog(
-          this,
-          "Simulate email notification: Prescription created and output file generated:\n" + outputFilePath,
-          "Prescription created",
-          JOptionPane.INFORMATION_MESSAGE
-      );
     } catch (RuntimeException exception) {
-      logToApplicationConsole("Failed creating prescription: " + safe(exception.getMessage()));
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
   }
@@ -300,13 +334,6 @@ public class PrescriptionsPanel extends JPanel {
         prescriptionsTable.scrollRectToVisible(prescriptionsTable.getCellRect(rowIndex, 0, true));
         return;
       }
-    }
-  }
-
-  private void logToApplicationConsole(String message) {
-    Window owner = SwingUtilities.getWindowAncestor(this);
-    if (owner instanceof MainFrame) {
-      ((MainFrame) owner).setStatusText(message);
     }
   }
 

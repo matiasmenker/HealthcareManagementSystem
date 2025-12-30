@@ -27,7 +27,7 @@ public class PrescriptionOutputFileGenerator {
     String fileName = "prescription_" + safe(prescription.getId()) + ".txt";
     Path filePath = outputDirectory.resolve(fileName);
 
-    String content = buildContent(prescription, patient, clinician);
+    String content = buildPrescriptionText(prescription, patient, clinician);
 
     try {
       Files.writeString(filePath, content);
@@ -45,31 +45,28 @@ public class PrescriptionOutputFileGenerator {
     }
   }
 
-  private String buildContent(Prescription prescription, Patient patient, Clinician clinician) {
+  private String buildPrescriptionText(Prescription prescription, Patient patient, Clinician clinician) {
     String lineSeparator = System.lineSeparator();
 
     return "Prescription Output" + lineSeparator
-        + "Prescription ID: " + safe(prescription.getId()) + lineSeparator
-        + "Date Issued: " + safe(prescription.getDateIssued()) + lineSeparator
+        + "Prescription Identifier: " + safe(prescription.getId()) + lineSeparator
+        + "Issue Date: " + safe(prescription.getDateIssued()) + lineSeparator
+        + "Status: " + safe(prescription.getCollectionStatus()) + lineSeparator
         + lineSeparator
-        + "Patient" + lineSeparator
-        + "Patient ID: " + safe(patient.getId()) + lineSeparator
+        + "Patient Details" + lineSeparator
+        + "Patient Identifier: " + safe(patient.getId()) + lineSeparator
         + "Patient Name: " + safe(patient.getFullName()) + lineSeparator
-        + "Patient Email: " + safe(patient.getEmail()) + lineSeparator
-        + "Patient NHS Number: " + safe(patient.getNhsNumber()) + lineSeparator
-        + "Patient Phone: " + safe(patient.getPhone()) + lineSeparator
-        + "Patient Address: " + safe(patient.getAddress()) + lineSeparator
+        + "Patient Email Address: " + safe(patient.getEmail()) + lineSeparator
         + lineSeparator
-        + "Clinician" + lineSeparator
-        + "Clinician ID: " + safe(clinician.getId()) + lineSeparator
+        + "Clinician Details" + lineSeparator
+        + "Clinician Identifier: " + safe(clinician.getId()) + lineSeparator
         + "Clinician Name: " + safe(clinician.getFullName()) + lineSeparator
-        + "Clinician Email: " + safe(clinician.getEmail()) + lineSeparator
+        + "Clinician Email Address: " + safe(clinician.getEmail()) + lineSeparator
         + lineSeparator
-        + "Medication" + lineSeparator
+        + "Medication Details" + lineSeparator
         + "Medication: " + safe(prescription.getMedication()) + lineSeparator
         + "Dosage: " + safe(prescription.getDosage()) + lineSeparator
-        + "Pharmacy: " + safe(prescription.getPharmacy()) + lineSeparator
-        + "Collection Status: " + safe(prescription.getCollectionStatus()) + lineSeparator;
+        + "Pharmacy: " + safe(prescription.getPharmacy()) + lineSeparator;
   }
 
   private String safe(String value) {
