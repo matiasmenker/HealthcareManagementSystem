@@ -5,13 +5,17 @@ import hms.controller.ClinicianController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
 import hms.controller.PrescriptionController;
+import hms.controller.ReferralController;
 import hms.controller.StaffController;
+import hms.model.singleton.ReferralManager;
 import hms.output.PrescriptionOutputFileGenerator;
+import hms.output.ReferralProcessingOutputWriter;
 import hms.repository.AppointmentRepository;
 import hms.repository.ClinicianRepository;
 import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
 import hms.repository.PrescriptionRepository;
+import hms.repository.ReferralRepository;
 import hms.repository.StaffRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
@@ -51,6 +55,9 @@ public class Main {
 				PrescriptionRepository prescriptionRepository = new PrescriptionRepository();
 				prescriptionRepository.load(dataDirectory.resolve("prescriptions.csv").toString());
 
+				ReferralRepository referralRepository = new ReferralRepository();
+				referralRepository.load(dataDirectory.resolve("referrals.csv").toString());
+
 				PatientController patientController = new PatientController(patientRepository);
 				ClinicianController clinicianController = new ClinicianController(clinicianRepository);
 				AppointmentController appointmentController = new AppointmentController(appointmentRepository,
@@ -63,14 +70,23 @@ public class Main {
 				PrescriptionController prescriptionController = new PrescriptionController(prescriptionRepository,
 						patientRepository, clinicianRepository, prescriptionOutputFileGenerator);
 
+				ReferralProcessingOutputWriter referralProcessingOutputWriter = new ReferralProcessingOutputWriter(
+						outputDirectory);
+				ReferralManager.getInstance(referralRepository, patientRepository, clinicianRepository,
+						facilityRepository, referralProcessingOutputWriter);
+
+				ReferralController referralController = new ReferralController(referralRepository, patientRepository,
+						clinicianRepository, facilityRepository);
+
 				mainFrame = new MainFrame(patientController, clinicianController, appointmentController,
-						facilityController, staffController, prescriptionController);
+						facilityController, staffController, prescriptionController, referralController);
 				mainFrame.setVisible(true);
 
 				Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(dataDirectory,
 						patientRepository.findAll().size(), clinicianRepository.findAll().size(),
 						appointmentRepository.findAll().size(), facilityRepository.findAll().size(),
-						staffRepository.findAll().size(), prescriptionRepository.findAll().size());
+						staffRepository.findAll().size(), prescriptionRepository.findAll().size(),
+						referralRepository.findAll().size());
 
 				mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
 			} catch (RuntimeException exception) {
@@ -85,10 +101,8 @@ public class Main {
 	}
 
 	private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount,
-			int cliniciansCount, int appointmentsCount, int facilitiesCount, int staffCount, int prescriptionsCount) {
-		Map<String, String> labelsByFileName = new LinkedHashMap<>();
-		labelsByFileName.put("referrals", "referrals.csv");
-
+			int cliniciansCount, int appointmentsCount, int facilitiesCount, int staffCount, int prescriptionsCount,
+			int referralsCount) {
 		Map<String, Integer> countsByLabel = new LinkedHashMap<>();
 		countsByLabel.put("patients", patientsCount);
 		countsByLabel.put("clinicians", cliniciansCount);
@@ -96,15 +110,11 @@ public class Main {
 		countsByLabel.put("facilities", facilitiesCount);
 		countsByLabel.put("staff", staffCount);
 		countsByLabel.put("prescriptions", prescriptionsCount);
+		countsByLabel.put("referrals", referralsCount);
 
-		for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
-			String label = entry.getKey();
-			String fileName = entry.getValue();
-			String filePath = dataDirectory.resolve(fileName).toString();
-
-			List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
-			countsByLabel.put(label, rows.size());
-		}
+		List<Map<String, String>> rows = CsvFileReader
+				.readRowsAsMaps(dataDirectory.resolve("referrals.csv").toString());
+		countsByLabel.put("referrals", rows.size());
 
 		return countsByLabel;
 	}
