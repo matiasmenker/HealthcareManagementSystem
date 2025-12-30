@@ -1,10 +1,13 @@
 package hms.view.staff;
 
+import hms.controller.FacilityController;
 import hms.controller.StaffController;
+import hms.model.Facility;
 import hms.model.Staff;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
+import hms.view.common.SelectionItem;
 
 import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
@@ -22,188 +25,218 @@ import java.util.Objects;
 
 public class StaffPanel extends JPanel {
 
-	private final StaffController staffController;
-	private final StaffTableModel staffTableModel;
-	private final JTable staffTable;
-	private final ButtonsActionsBar buttonsActionsBar;
+  private final StaffController staffController;
+  private final FacilityController facilityController;
 
-	public StaffPanel(StaffController staffController) {
-		this.staffController = Objects.requireNonNull(staffController, "staffController");
+  private final StaffTableModel staffTableModel;
+  private final JTable staffTable;
+  private final ButtonsActionsBar buttonsActionsBar;
 
-		setLayout(new BorderLayout(10, 10));
-		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+  public StaffPanel(StaffController staffController, FacilityController facilityController) {
+    this.staffController = Objects.requireNonNull(staffController, "staffController");
+    this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
 
-		staffTableModel = new StaffTableModel();
-		staffTable = new JTable(staffTableModel);
-		staffTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    setLayout(new BorderLayout(10, 10));
+    setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
-			@Override
-			public void onAdd() {
-				openAddStaffDialog();
-			}
+    staffTableModel = new StaffTableModel();
+    staffTable = new JTable(staffTableModel);
+    staffTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-			@Override
-			public void onEdit() {
-				openEditStaffDialog();
-			}
+    buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
+      @Override
+      public void onAdd() {
+        openAddStaffDialog();
+      }
 
-			@Override
-			public void onRefresh() {
-				refreshStaffTable();
-			}
-		});
+      @Override
+      public void onEdit() {
+        openEditStaffDialog();
+      }
 
-		buttonsActionsBar.setEditEnabled(false);
+      @Override
+      public void onRefresh() {
+        refreshStaffTable();
+      }
+    });
 
-		staffTable.getSelectionModel().addListSelectionListener(event -> {
-			if (event.getValueIsAdjusting()) {
-				return;
-			}
-			boolean hasSelection = staffTable.getSelectedRow() >= 0;
-			buttonsActionsBar.setEditEnabled(hasSelection);
-		});
+    buttonsActionsBar.setEditEnabled(false);
 
-		add(buttonsActionsBar, BorderLayout.NORTH);
-		add(new JScrollPane(staffTable), BorderLayout.CENTER);
+    staffTable.getSelectionModel().addListSelectionListener(event -> {
+      if (event.getValueIsAdjusting()) {
+        return;
+      }
+      boolean hasSelection = staffTable.getSelectedRow() >= 0;
+      buttonsActionsBar.setEditEnabled(hasSelection);
+    });
 
-		refreshStaffTable();
-	}
+    add(buttonsActionsBar, BorderLayout.NORTH);
+    add(new JScrollPane(staffTable), BorderLayout.CENTER);
 
-	private void refreshStaffTable() {
-		try {
-			List<Staff> staffMembers = staffController.getAllStaff();
-			staffTableModel.setStaffMembers(staffMembers);
-			buttonsActionsBar.setEditEnabled(staffTable.getSelectedRow() >= 0);
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+    refreshStaffTable();
+  }
 
-	private void openAddStaffDialog() {
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+  private void refreshStaffTable() {
+    try {
+      List<Staff> staffMembers = staffController.getAllStaff();
+      Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
+      staffTableModel.setStaffMembers(staffMembers, facilityNamesByFacilityId);
+      buttonsActionsBar.setEditEnabled(staffTable.getSelectedRow() >= 0);
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredEditable("staffId", "Staff ID"),
-					FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.requiredEditable("role", "Role"),
-					FormFieldViewConfiguration.optionalEditable("department", "Department"),
-					FormFieldViewConfiguration.optionalEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("workLocation", "Work Location"),
-					FormFieldViewConfiguration.optionalEditable("shiftPattern", "Shift Pattern"),
-					FormFieldViewConfiguration.optionalEditable("employmentStatus", "Employment Status"),
-					FormFieldViewConfiguration.optionalEditable("startDate", "Start Date (YYYY-MM-DD)"),
-					FormFieldViewConfiguration.optionalEditable("supervisorName", "Supervisor Name"),
-					FormFieldViewConfiguration.optionalEditable("accessLevel", "Access Level"));
+  private void openAddStaffDialog() {
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			FormDialog formDialog = new FormDialog(owner, "Add Staff", fieldViewConfigurations, Map.of());
-			formDialog.setVisible(true);
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredEditable("staffId", "Staff ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("role", "Role"),
+          FormFieldViewConfiguration.requiredSelect("facilityId", "Facility", facilityOptions)
+      );
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      FormDialog formDialog = new FormDialog(owner, "Add Staff", fieldViewConfigurations, Map.of());
+      formDialog.setVisible(true);
 
-			Staff staff = new Staff(valuesByKey.getOrDefault("staffId", ""), valuesByKey.getOrDefault("fullName", ""),
-					valuesByKey.getOrDefault("email", ""), valuesByKey.getOrDefault("role", ""),
-					valuesByKey.getOrDefault("department", ""), valuesByKey.getOrDefault("phoneNumber", ""),
-					valuesByKey.getOrDefault("workLocation", ""), valuesByKey.getOrDefault("shiftPattern", ""),
-					valuesByKey.getOrDefault("employmentStatus", ""), valuesByKey.getOrDefault("startDate", ""),
-					valuesByKey.getOrDefault("supervisorName", ""), valuesByKey.getOrDefault("accessLevel", ""));
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-			staffController.addStaff(staff);
-			refreshStaffTable();
-			selectStaffById(staff.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-	private void openEditStaffDialog() {
-		int selectedRowIndex = staffTable.getSelectedRow();
-		if (selectedRowIndex < 0) {
-			JOptionPane.showMessageDialog(this, "Select a staff member to edit.", "Edit",
-					JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      Staff staff = new Staff(
+          valuesByKey.getOrDefault("staffId", ""),
+          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("role", ""),
+          valuesByKey.getOrDefault("facilityId", "")
+      );
 
-		Staff selectedStaff = staffTableModel.getStaffAtRow(selectedRowIndex);
-		if (selectedStaff == null) {
-			JOptionPane.showMessageDialog(this, "Select a staff member to edit.", "Edit",
-					JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      staffController.addStaff(staff);
+      refreshStaffTable();
+      selectStaffById(staff.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+  private void openEditStaffDialog() {
+    int selectedRowIndex = staffTable.getSelectedRow();
+    if (selectedRowIndex < 0) {
+      JOptionPane.showMessageDialog(this, "Select a staff member to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredReadOnly("staffId", "Staff ID"),
-					FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.requiredEditable("role", "Role"),
-					FormFieldViewConfiguration.optionalEditable("department", "Department"),
-					FormFieldViewConfiguration.optionalEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("workLocation", "Work Location"),
-					FormFieldViewConfiguration.optionalEditable("shiftPattern", "Shift Pattern"),
-					FormFieldViewConfiguration.optionalEditable("employmentStatus", "Employment Status"),
-					FormFieldViewConfiguration.optionalEditable("startDate", "Start Date (YYYY-MM-DD)"),
-					FormFieldViewConfiguration.optionalEditable("supervisorName", "Supervisor Name"),
-					FormFieldViewConfiguration.optionalEditable("accessLevel", "Access Level"));
+    Staff selectedStaff = staffTableModel.getStaffAtRow(selectedRowIndex);
+    if (selectedStaff == null) {
+      JOptionPane.showMessageDialog(this, "Select a staff member to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-			defaultValuesByKey.put("staffId", selectedStaff.getId());
-			defaultValuesByKey.put("fullName", selectedStaff.getFullName());
-			defaultValuesByKey.put("email", selectedStaff.getEmail());
-			defaultValuesByKey.put("role", selectedStaff.getRole());
-			defaultValuesByKey.put("department", selectedStaff.getDepartment());
-			defaultValuesByKey.put("phoneNumber", selectedStaff.getPhoneNumber());
-			defaultValuesByKey.put("workLocation", selectedStaff.getWorkLocation());
-			defaultValuesByKey.put("shiftPattern", selectedStaff.getShiftPattern());
-			defaultValuesByKey.put("employmentStatus", selectedStaff.getEmploymentStatus());
-			defaultValuesByKey.put("startDate", selectedStaff.getStartDate());
-			defaultValuesByKey.put("supervisorName", selectedStaff.getSupervisorName());
-			defaultValuesByKey.put("accessLevel", selectedStaff.getAccessLevel());
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			FormDialog formDialog = new FormDialog(owner, "Edit Staff", fieldViewConfigurations, defaultValuesByKey);
-			formDialog.setVisible(true);
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredReadOnly("staffId", "Staff ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("role", "Role"),
+          FormFieldViewConfiguration.requiredSelect("facilityId", "Facility", facilityOptions)
+      );
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
+      defaultValuesByKey.put("staffId", selectedStaff.getId());
+      defaultValuesByKey.put("fullName", selectedStaff.getFullName());
+      defaultValuesByKey.put("email", selectedStaff.getEmail());
+      defaultValuesByKey.put("role", selectedStaff.getRole());
+      defaultValuesByKey.put("facilityId", selectedStaff.getFacilityId());
 
-			Staff updatedStaff = new Staff(selectedStaff.getId(), valuesByKey.getOrDefault("fullName", ""),
-					valuesByKey.getOrDefault("email", ""), valuesByKey.getOrDefault("role", ""),
-					valuesByKey.getOrDefault("department", ""), valuesByKey.getOrDefault("phoneNumber", ""),
-					valuesByKey.getOrDefault("workLocation", ""), valuesByKey.getOrDefault("shiftPattern", ""),
-					valuesByKey.getOrDefault("employmentStatus", ""), valuesByKey.getOrDefault("startDate", ""),
-					valuesByKey.getOrDefault("supervisorName", ""), valuesByKey.getOrDefault("accessLevel", ""));
+      FormDialog formDialog = new FormDialog(owner, "Edit Staff", fieldViewConfigurations, defaultValuesByKey);
+      formDialog.setVisible(true);
 
-			staffController.updateStaff(updatedStaff);
-			refreshStaffTable();
-			selectStaffById(updatedStaff.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-	private void selectStaffById(String staffId) {
-		if (staffId == null || staffId.trim().isEmpty()) {
-			return;
-		}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-		for (int rowIndex = 0; rowIndex < staffTableModel.getRowCount(); rowIndex++) {
-			Staff staff = staffTableModel.getStaffAtRow(rowIndex);
-			if (staff != null && staffId.equals(staff.getId())) {
-				staffTable.setRowSelectionInterval(rowIndex, rowIndex);
-				staffTable.scrollRectToVisible(staffTable.getCellRect(rowIndex, 0, true));
-				return;
-			}
-		}
-	}
+      Staff updatedStaff = new Staff(
+          selectedStaff.getId(),
+          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("role", ""),
+          valuesByKey.getOrDefault("facilityId", "")
+      );
+
+      staffController.updateStaff(updatedStaff);
+      refreshStaffTable();
+      selectStaffById(updatedStaff.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      facilityNamesByFacilityId.put(id, safe(facility.getName()));
+    }
+    return facilityNamesByFacilityId;
+  }
+
+  private List<SelectionItem> buildFacilitySelectionItems() {
+    List<Facility> facilities = facilityController.getAllFacilities();
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      String name = safe(facility.getName());
+      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
+      items.add(new SelectionItem(id, label));
+    }
+    return items;
+  }
+
+  private void selectStaffById(String staffId) {
+    if (staffId == null || staffId.trim().isEmpty()) {
+      return;
+    }
+
+    for (int rowIndex = 0; rowIndex < staffTableModel.getRowCount(); rowIndex++) {
+      Staff staff = staffTableModel.getStaffAtRow(rowIndex);
+      if (staff != null && staffId.equals(staff.getId())) {
+        staffTable.setRowSelectionInterval(rowIndex, rowIndex);
+        staffTable.scrollRectToVisible(staffTable.getCellRect(rowIndex, 0, true));
+        return;
+      }
+    }
+  }
+
+  private String safe(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 }

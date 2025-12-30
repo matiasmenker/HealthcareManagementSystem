@@ -3,65 +3,56 @@ package hms.controller;
 import hms.model.Clinician;
 import hms.repository.ClinicianRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class ClinicianController {
 
-	private final ClinicianRepository clinicianRepository;
+  private final ClinicianRepository clinicianRepository;
 
-	public ClinicianController(ClinicianRepository clinicianRepository) {
-		this.clinicianRepository = Objects.requireNonNull(clinicianRepository, "clinicianRepository");
-	}
+  public ClinicianController(ClinicianRepository clinicianRepository) {
+    this.clinicianRepository = Objects.requireNonNull(clinicianRepository, "clinicianRepository");
+  }
 
-	public void loadCliniciansFromCsv(String filePath) {
-		clinicianRepository.load(filePath);
-	}
+  public List<Clinician> getAllClinicians() {
+    return new ArrayList<>(clinicianRepository.findAll());
+  }
 
-	public List<Clinician> getAllClinicians() {
-		return clinicianRepository.findAll();
-	}
+  public Clinician getClinicianById(String clinicianId) {
+    return clinicianRepository.findById(clinicianId);
+  }
 
-	public Clinician getClinicianById(String clinicianId) {
-		if (clinicianId == null || clinicianId.trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician id is required");
-		}
+  public void addClinician(Clinician clinician) {
+    validateClinicianForCreateOrUpdate(clinician);
+    clinicianRepository.add(clinician);
+  }
 
-		Clinician clinician = clinicianRepository.findById(clinicianId);
-		if (clinician == null) {
-			throw new IllegalArgumentException("Clinician not found: " + clinicianId);
-		}
+  public void updateClinician(Clinician clinician) {
+    validateClinicianForCreateOrUpdate(clinician);
+    clinicianRepository.update(clinician);
+  }
 
-		return clinician;
-	}
+  public int getCliniciansCount() {
+    return clinicianRepository.findAll().size();
+  }
 
-	public void addClinician(Clinician clinician) {
-		validateClinician(clinician);
-		clinicianRepository.add(clinician);
-	}
+  private void validateClinicianForCreateOrUpdate(Clinician clinician) {
+    if (clinician == null) {
+      throw new IllegalArgumentException("Clinician is required");
+    }
+    if (isBlank(clinician.getId())) {
+      throw new IllegalArgumentException("Clinician ID is required");
+    }
+    if (isBlank(clinician.getFullName())) {
+      throw new IllegalArgumentException("Clinician full name is required");
+    }
+    if (isBlank(clinician.getEmail())) {
+      throw new IllegalArgumentException("Clinician email is required");
+    }
+  }
 
-	public void updateClinician(Clinician clinician) {
-		validateClinician(clinician);
-		clinicianRepository.update(clinician);
-	}
-
-	private void validateClinician(Clinician clinician) {
-		Objects.requireNonNull(clinician, "clinician");
-
-		if (clinician.getId() == null || clinician.getId().trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician id is required");
-		}
-		if (clinician.getFullName() == null || clinician.getFullName().trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician full name is required");
-		}
-		if (clinician.getTitle() == null || clinician.getTitle().trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician title is required");
-		}
-		if (clinician.getWorkplaceId() == null || clinician.getWorkplaceId().trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician workplace id is required");
-		}
-		if (clinician.getWorkplaceType() == null || clinician.getWorkplaceType().trim().isEmpty()) {
-			throw new IllegalArgumentException("Clinician workplace type is required");
-		}
-	}
+  private boolean isBlank(String value) {
+    return value == null || value.trim().isEmpty();
+  }
 }

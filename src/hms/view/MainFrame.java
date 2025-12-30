@@ -51,12 +51,12 @@ public class MainFrame extends JFrame {
 
     JTabbedPane tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Patients", new PatientsPanel(patientController));
-    tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController));
+    tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController, facilityController));
     tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController, clinicianController, facilityController));
     tabbedPane.addTab("Prescriptions", new PrescriptionsPanel(prescriptionController, patientController, clinicianController));
     tabbedPane.addTab("Referrals", new ReferralsPanel(referralController, patientController, clinicianController, facilityController));
     tabbedPane.addTab("Facilities", new FacilitiesPanel(facilityController));
-    tabbedPane.addTab("Staff", new StaffPanel(staffController));
+    tabbedPane.addTab("Staff", new StaffPanel(staffController, facilityController));
 
     add(tabbedPane, BorderLayout.CENTER);
     add(statusBarLabel, BorderLayout.SOUTH);

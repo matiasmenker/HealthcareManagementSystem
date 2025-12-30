@@ -4,103 +4,133 @@ import hms.model.Staff;
 import hms.util.CsvFileReader;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-public class StaffRepository extends BaseRepository {
+public class StaffRepository {
 
-	private final List<Staff> staffMembers = new ArrayList<>();
-	private final Map<String, Staff> staffById = new LinkedHashMap<>();
+  private final List<Staff> staffMembers;
 
-	public void load(String filePath) {
-		Objects.requireNonNull(filePath, "filePath");
+  public StaffRepository() {
+    this.staffMembers = new ArrayList<>();
+  }
 
-		staffMembers.clear();
-		staffById.clear();
+  public void load(String filePath) {
+    staffMembers.clear();
 
-		List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
-		for (Map<String, String> row : rows) {
-			Staff staff = mapRowToStaff(row);
-			add(staff);
-		}
-	}
+    List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
+    for (Map<String, String> row : rows) {
+      String staffId = read(row, "staff_id");
+      String firstName = read(row, "first_name");
+      String lastName = read(row, "last_name");
+      String email = read(row, "email");
 
-	public List<Staff> findAll() {
-		return new ArrayList<>(staffMembers);
-	}
+      String role = read(row, "role");
+      String facilityId = read(row, "facility_id");
 
-	public Staff findById(String staffId) {
-		if (staffId == null) {
-			return null;
-		}
-		return staffById.get(staffId);
-	}
+      String fullName = buildFullName(firstName, lastName);
 
-	public void add(Staff staff) {
-		Objects.requireNonNull(staff, "staff");
+      Staff staff = new Staff(
+          staffId,
+          fullName,
+          email,
+          role,
+          facilityId
+      );
 
-		String staffId = staff.getId();
-		if (staffId == null || staffId.trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff id is required");
-		}
-		if (staffById.containsKey(staffId)) {
-			throw new IllegalArgumentException("Duplicate staff id: " + staffId);
-		}
+      staffMembers.add(staff);
+    }
+  }
 
-		staffMembers.add(staff);
-		staffById.put(staffId, staff);
-	}
+  public List<Staff> findAll() {
+    return new ArrayList<>(staffMembers);
+  }
 
-	public void update(Staff staff) {
-		Objects.requireNonNull(staff, "staff");
+  public Staff findById(String id) {
+    String normalizedId = normalize(id);
+    if (normalizedId.isEmpty()) {
+      return null;
+    }
 
-		String staffId = staff.getId();
-		if (staffId == null || staffId.trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff id is required");
-		}
+    for (Staff staff : staffMembers) {
+      if (staff == null) {
+        continue;
+      }
+      if (normalizedId.equals(normalize(staff.getId()))) {
+        return staff;
+      }
+    }
+    return null;
+  }
 
-		Staff existing = staffById.get(staffId);
-		if (existing == null) {
-			throw new IllegalArgumentException("Staff not found: " + staffId);
-		}
+  public void add(Staff staff) {
+    if (staff == null) {
+      throw new IllegalArgumentException("Staff is required");
+    }
+    String staffId = normalize(staff.getId());
+    if (staffId.isEmpty()) {
+      throw new IllegalArgumentException("Staff id is required");
+    }
+    if (findById(staffId) != null) {
+      throw new IllegalArgumentException("Staff id already exists: " + staffId);
+    }
+    staffMembers.add(staff);
+  }
 
-		existing.setFullName(staff.getFullName());
-		existing.setEmail(staff.getEmail());
-		existing.setRole(staff.getRole());
-		existing.setDepartment(staff.getDepartment());
-		existing.setPhoneNumber(staff.getPhoneNumber());
-		existing.setWorkLocation(staff.getWorkLocation());
-		existing.setShiftPattern(staff.getShiftPattern());
-		existing.setEmploymentStatus(staff.getEmploymentStatus());
-		existing.setStartDate(staff.getStartDate());
-		existing.setSupervisorName(staff.getSupervisorName());
-		existing.setAccessLevel(staff.getAccessLevel());
-	}
+  public void update(Staff staff) {
+    if (staff == null) {
+      throw new IllegalArgumentException("Staff is required");
+    }
+    String staffId = normalize(staff.getId());
+    if (staffId.isEmpty()) {
+      throw new IllegalArgumentException("Staff id is required");
+    }
 
-	private Staff mapRowToStaff(Map<String, String> row) {
-		String staffId = value(row, "staff_id");
-		String firstName = value(row, "first_name");
-		String lastName = value(row, "last_name");
-		String role = value(row, "role");
-		String department = value(row, "department");
-		String phoneNumber = value(row, "phone_number");
-		String email = value(row, "email");
-		String workLocation = value(row, "work_location");
-		String shiftPattern = value(row, "shift_pattern");
-		String employmentStatus = value(row, "employment_status");
-		String startDate = value(row, "start_date");
-		String supervisorName = value(row, "supervisor_name");
-		String accessLevel = value(row, "access_level");
+    for (int index = 0; index < staffMembers.size(); index++) {
+      Staff existingStaff = staffMembers.get(index);
+      if (existingStaff == null) {
+        continue;
+      }
+      if (staffId.equals(normalize(existingStaff.getId()))) {
+        staffMembers.set(index, staff);
+        return;
+      }
+    }
 
-		if (staffId.isEmpty()) {
-			throw new IllegalArgumentException("Staff row is missing required field: staff_id");
-		}
+    throw new IllegalArgumentException("Staff not found: " + staffId);
+  }
 
-		String fullName = (firstName + " " + lastName).trim();
+  private String read(Map<String, String> row, String key) {
+    if (row == null) {
+      return "";
+    }
+    String value = row.getOrDefault(key, "");
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 
-		return new Staff(staffId, fullName, email, role, department, phoneNumber, workLocation, shiftPattern,
-				employmentStatus, startDate, supervisorName, accessLevel);
-	}
+  private String buildFullName(String firstName, String lastName) {
+    String left = normalize(firstName);
+    String right = normalize(lastName);
+
+    if (!left.isEmpty() && !right.isEmpty()) {
+      return left + " " + right;
+    }
+    if (!left.isEmpty()) {
+      return left;
+    }
+    if (!right.isEmpty()) {
+      return right;
+    }
+    return "";
+  }
+
+  private String normalize(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 }
