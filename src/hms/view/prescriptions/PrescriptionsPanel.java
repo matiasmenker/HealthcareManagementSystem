@@ -6,6 +6,7 @@ import hms.controller.PrescriptionController;
 import hms.model.Clinician;
 import hms.model.Patient;
 import hms.model.Prescription;
+import hms.view.MainFrame;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -132,10 +133,14 @@ public class PrescriptionsPanel extends JPanel {
           valuesByKey.getOrDefault("dateIssued", "")
       );
 
-      prescriptionController.addPrescription(prescription);
+      String outputFilePath = prescriptionController.addPrescriptionAndGenerateOutput(prescription);
+
       refreshPrescriptionsTable();
       selectPrescriptionById(prescription.getId());
+
+      logToApplicationConsole("Generated " + outputFilePath);
     } catch (RuntimeException exception) {
+      logToApplicationConsole("Failed creating prescription: " + safe(exception.getMessage()));
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
   }
@@ -288,6 +293,13 @@ public class PrescriptionsPanel extends JPanel {
         prescriptionsTable.scrollRectToVisible(prescriptionsTable.getCellRect(rowIndex, 0, true));
         return;
       }
+    }
+  }
+
+  private void logToApplicationConsole(String message) {
+    Window owner = SwingUtilities.getWindowAncestor(this);
+    if (owner instanceof MainFrame) {
+      ((MainFrame) owner).setStatusText(message);
     }
   }
 
