@@ -17,15 +17,11 @@ import hms.repository.PatientRepository;
 import hms.repository.PrescriptionRepository;
 import hms.repository.ReferralRepository;
 import hms.repository.StaffRepository;
-import hms.util.CsvFileReader;
 import hms.view.MainFrame;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 public class Main {
   public static void main(String[] args) {
@@ -106,21 +102,21 @@ public class Main {
         );
         mainFrame.setVisible(true);
 
-        Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
+        logStartupInformation(
+            mainFrame,
             dataDirectory,
+            outputDirectory,
             patientRepository.findAll().size(),
             clinicianRepository.findAll().size(),
-            appointmentRepository.findAll().size(),
             facilityRepository.findAll().size(),
-            staffRepository.findAll().size(),
+            appointmentRepository.findAll().size(),
             prescriptionRepository.findAll().size(),
-            referralRepository.findAll().size()
+            referralRepository.findAll().size(),
+            staffRepository.findAll().size()
         );
-
-        mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
       } catch (RuntimeException exception) {
         if (mainFrame != null) {
-          mainFrame.setStatusText("Failed loading CSV files");
+          mainFrame.setStatusText("Startup error: " + exception.getMessage());
         }
 
         JOptionPane.showMessageDialog(
@@ -133,37 +129,25 @@ public class Main {
     });
   }
 
-  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory,
-                                                             int patientsCount,
-                                                             int cliniciansCount,
-                                                             int appointmentsCount,
-                                                             int facilitiesCount,
-                                                             int staffCount,
-                                                             int prescriptionsCount,
-                                                             int referralsCount) {
-    Map<String, Integer> countsByLabel = new LinkedHashMap<>();
-    countsByLabel.put("patients", patientsCount);
-    countsByLabel.put("clinicians", cliniciansCount);
-    countsByLabel.put("appointments", appointmentsCount);
-    countsByLabel.put("facilities", facilitiesCount);
-    countsByLabel.put("staff", staffCount);
-    countsByLabel.put("prescriptions", prescriptionsCount);
-    countsByLabel.put("referrals", referralsCount);
-
-    List<Map<String, String>> referralRows = CsvFileReader.readRowsAsMaps(dataDirectory.resolve("referrals.csv").toString());
-    countsByLabel.put("referrals", referralRows.size());
-
-    return countsByLabel;
-  }
-
-  private static String buildStatusText(Map<String, Integer> countsByLabel) {
-    return "Loaded "
-        + countsByLabel.getOrDefault("patients", 0) + " patients, "
-        + countsByLabel.getOrDefault("clinicians", 0) + " clinicians, "
-        + countsByLabel.getOrDefault("facilities", 0) + " facilities, "
-        + countsByLabel.getOrDefault("appointments", 0) + " appointments, "
-        + countsByLabel.getOrDefault("prescriptions", 0) + " prescriptions, "
-        + countsByLabel.getOrDefault("referrals", 0) + " referrals, "
-        + countsByLabel.getOrDefault("staff", 0) + " staff";
+  private static void logStartupInformation(MainFrame mainFrame,
+                                           Path dataDirectory,
+                                           Path outputDirectory,
+                                           int patientsCount,
+                                           int cliniciansCount,
+                                           int facilitiesCount,
+                                           int appointmentsCount,
+                                           int prescriptionsCount,
+                                           int referralsCount,
+                                           int staffCount) {
+    mainFrame.setStatusText("Application started");
+    mainFrame.setStatusText("Data directory: " + dataDirectory.toString());
+    mainFrame.setStatusText("Output directory: " + outputDirectory.toString());
+    mainFrame.setStatusText("Loaded patients: " + patientsCount);
+    mainFrame.setStatusText("Loaded clinicians: " + cliniciansCount);
+    mainFrame.setStatusText("Loaded facilities: " + facilitiesCount);
+    mainFrame.setStatusText("Loaded appointments: " + appointmentsCount);
+    mainFrame.setStatusText("Loaded prescriptions: " + prescriptionsCount);
+    mainFrame.setStatusText("Loaded referrals: " + referralsCount);
+    mainFrame.setStatusText("Loaded staff: " + staffCount);
   }
 }
