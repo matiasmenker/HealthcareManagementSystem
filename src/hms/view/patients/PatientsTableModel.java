@@ -14,15 +14,17 @@ public class PatientsTableModel extends AbstractTableModel {
       "Patient ID",
       "Full Name",
       "Email",
-      "NHS Number",
-      "Phone",
-      "Address",
-      "Registered Facility ID",
-      "Registered Facility Name"
+      "Registered Facility"
   };
 
   private List<Patient> patients = new ArrayList<>();
   private Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+
+  public void setPatients(List<Patient> patients) {
+    this.patients = patients == null ? new ArrayList<>() : new ArrayList<>(patients);
+    this.facilityNamesByFacilityId = new LinkedHashMap<>();
+    fireTableDataChanged();
+  }
 
   public void setPatients(List<Patient> patients, Map<String, String> facilityNamesByFacilityId) {
     this.patients = patients == null ? new ArrayList<>() : new ArrayList<>(patients);
@@ -60,28 +62,24 @@ public class PatientsTableModel extends AbstractTableModel {
     }
 
     if (columnIndex == 0) {
-      return patient.getId();
+      return safe(patient.getId());
     }
     if (columnIndex == 1) {
-      return patient.getFullName();
+      return safe(patient.getFullName());
     }
     if (columnIndex == 2) {
-      return patient.getEmail();
+      return safe(patient.getEmail());
     }
     if (columnIndex == 3) {
-      return patient.getNhsNumber();
-    }
-    if (columnIndex == 4) {
-      return patient.getPhone();
-    }
-    if (columnIndex == 5) {
-      return patient.getAddress();
-    }
-    if (columnIndex == 6) {
-      return patient.getRegisteredFacilityId();
-    }
-    if (columnIndex == 7) {
-      return facilityNamesByFacilityId.getOrDefault(safe(patient.getRegisteredFacilityId()), "");
+      String facilityId = safe(patient.getRegisteredFacilityId());
+      if (facilityId.isEmpty()) {
+        return "";
+      }
+      String facilityName = safe(facilityNamesByFacilityId.get(facilityId));
+      if (!facilityName.isEmpty()) {
+        return facilityName;
+      }
+      return "Facility " + facilityId;
     }
 
     return "";
