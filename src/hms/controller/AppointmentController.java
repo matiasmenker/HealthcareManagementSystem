@@ -47,6 +47,13 @@ public class AppointmentController {
     appointmentRepository.update(appointment);
   }
 
+  public void deleteAppointment(String appointmentId) {
+    if (isBlank(appointmentId)) {
+      throw new IllegalArgumentException("Appointment id is required");
+    }
+    appointmentRepository.delete(appointmentId);
+  }
+
   private void validateAppointment(Appointment appointment) {
     Objects.requireNonNull(appointment, "appointment");
 

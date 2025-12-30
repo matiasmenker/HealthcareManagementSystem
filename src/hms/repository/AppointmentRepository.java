@@ -12,108 +12,137 @@ import java.util.Objects;
 
 public class AppointmentRepository extends BaseRepository {
 
-	private final List<Appointment> appointments = new ArrayList<>();
-	private final Map<String, Appointment> appointmentsById = new LinkedHashMap<>();
+  private final List<Appointment> appointments = new ArrayList<>();
+  private final Map<String, Appointment> appointmentsById = new LinkedHashMap<>();
 
-	public void load(String filePath) {
-		Objects.requireNonNull(filePath, "filePath");
+  public void load(String filePath) {
+    Objects.requireNonNull(filePath, "filePath");
 
-		appointments.clear();
-		appointmentsById.clear();
+    appointments.clear();
+    appointmentsById.clear();
 
-		List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
-		for (Map<String, String> row : rows) {
-			Appointment appointment = mapRowToAppointment(row);
-			add(appointment);
-		}
-	}
+    List<Map<String, String>> rows = CsvFileReader.readRowsAsMaps(filePath);
+    for (Map<String, String> row : rows) {
+      Appointment appointment = mapRowToAppointment(row);
+      add(appointment);
+    }
+  }
 
-	public List<Appointment> findAll() {
-		return new ArrayList<>(appointments);
-	}
+  public List<Appointment> findAll() {
+    return new ArrayList<>(appointments);
+  }
 
-	public Appointment findById(String id) {
-		if (id == null) {
-			return null;
-		}
-		return appointmentsById.get(id);
-	}
+  public Appointment findById(String id) {
+    String normalizedId = normalizeId(id);
+    if (normalizedId.isEmpty()) {
+      return null;
+    }
+    return appointmentsById.get(normalizedId);
+  }
 
-	public void add(Appointment appointment) {
-		Objects.requireNonNull(appointment, "appointment");
+  public void add(Appointment appointment) {
+    Objects.requireNonNull(appointment, "appointment");
 
-		String id = appointment.getId();
-		if (id == null || id.trim().isEmpty()) {
-			throw new IllegalArgumentException("Appointment id is required");
-		}
-		if (appointmentsById.containsKey(id)) {
-			throw new IllegalArgumentException("Duplicate appointment id: " + id);
-		}
+    String normalizedId = normalizeId(appointment.getId());
+    if (normalizedId.isEmpty()) {
+      throw new IllegalArgumentException("Appointment id is required");
+    }
+    if (appointmentsById.containsKey(normalizedId)) {
+      throw new IllegalArgumentException("Duplicate appointment id: " + normalizedId);
+    }
 
-		appointments.add(appointment);
-		appointmentsById.put(id, appointment);
-	}
+    appointments.add(appointment);
+    appointmentsById.put(normalizedId, appointment);
+  }
 
-	public void update(Appointment appointment) {
-		Objects.requireNonNull(appointment, "appointment");
+  public void update(Appointment appointment) {
+    Objects.requireNonNull(appointment, "appointment");
 
-		String id = appointment.getId();
-		if (id == null || id.trim().isEmpty()) {
-			throw new IllegalArgumentException("Appointment id is required");
-		}
+    String normalizedId = normalizeId(appointment.getId());
+    if (normalizedId.isEmpty()) {
+      throw new IllegalArgumentException("Appointment id is required");
+    }
 
-		Appointment existing = appointmentsById.get(id);
-		if (existing == null) {
-			throw new IllegalArgumentException("Appointment not found: " + id);
-		}
+    Appointment existing = appointmentsById.get(normalizedId);
+    if (existing == null) {
+      throw new IllegalArgumentException("Appointment not found: " + normalizedId);
+    }
 
-		existing.setPatientId(appointment.getPatientId());
-		existing.setClinicianId(appointment.getClinicianId());
-		existing.setFacilityId(appointment.getFacilityId());
-		existing.setDateTime(appointment.getDateTime());
-		existing.setStatus(appointment.getStatus());
-		existing.setReason(appointment.getReason());
-	}
+    existing.setPatientId(appointment.getPatientId());
+    existing.setClinicianId(appointment.getClinicianId());
+    existing.setFacilityId(appointment.getFacilityId());
+    existing.setDateTime(appointment.getDateTime());
+    existing.setStatus(appointment.getStatus());
+    existing.setReason(appointment.getReason());
+  }
 
-	private Appointment mapRowToAppointment(Map<String, String> row) {
-		String appointmentId = value(row, "appointment_id");
-		String patientId = value(row, "patient_id");
-		String clinicianId = value(row, "clinician_id");
-		String facilityId = value(row, "facility_id");
-		String appointmentDate = value(row, "appointment_date");
-		String appointmentTime = value(row, "appointment_time");
-		String status = value(row, "status");
-		String reason = value(row, "reason_for_visit");
+  public void delete(String appointmentId) {
+    String normalizedId = normalizeId(appointmentId);
+    if (normalizedId.isEmpty()) {
+      throw new IllegalArgumentException("Appointment id is required");
+    }
 
-		if (appointmentId.isEmpty()) {
-			throw new IllegalArgumentException("Appointment row is missing required field: appointment_id");
-		}
+    Appointment existing = appointmentsById.get(normalizedId);
+    if (existing == null) {
+      throw new IllegalArgumentException("Appointment not found: " + normalizedId);
+    }
 
-		String dateTime = (appointmentDate + " " + appointmentTime).trim();
+    appointments.remove(existing);
+    appointmentsById.remove(normalizedId);
+  }
 
-		return new Appointment(appointmentId, patientId, clinicianId, facilityId, dateTime,
-				parseAppointmentStatus(status), reason);
-	}
+  private Appointment mapRowToAppointment(Map<String, String> row) {
+    String appointmentId = value(row, "appointment_id");
+    String patientId = value(row, "patient_id");
+    String clinicianId = value(row, "clinician_id");
+    String facilityId = value(row, "facility_id");
+    String appointmentDate = value(row, "appointment_date");
+    String appointmentTime = value(row, "appointment_time");
+    String status = value(row, "status");
+    String reason = value(row, "reason_for_visit");
 
-	private AppointmentStatus parseAppointmentStatus(String rawStatus) {
-		if (rawStatus == null) {
-			return AppointmentStatus.SCHEDULED;
-		}
+    if (appointmentId.isEmpty()) {
+      throw new IllegalArgumentException("Appointment row is missing required field: appointment_id");
+    }
 
-		String normalized = rawStatus.trim().toUpperCase();
-		if (normalized.isEmpty()) {
-			return AppointmentStatus.SCHEDULED;
-		}
+    String dateTime = (appointmentDate + " " + appointmentTime).trim();
 
-		if (normalized.equals("CANCELED")) {
-			normalized = "CANCELLED";
-		}
+    return new Appointment(
+        appointmentId,
+        patientId,
+        clinicianId,
+        facilityId,
+        dateTime,
+        parseAppointmentStatus(status),
+        reason
+    );
+  }
 
-		try {
-			return AppointmentStatus.valueOf(normalized);
-		} catch (IllegalArgumentException exception) {
-			return AppointmentStatus.SCHEDULED;
-		}
-	}
+  private AppointmentStatus parseAppointmentStatus(String rawStatus) {
+    if (rawStatus == null) {
+      return AppointmentStatus.SCHEDULED;
+    }
 
+    String normalized = rawStatus.trim().toUpperCase();
+    if (normalized.isEmpty()) {
+      return AppointmentStatus.SCHEDULED;
+    }
+
+    if (normalized.equals("CANCELED")) {
+      normalized = "CANCELLED";
+    }
+
+    try {
+      return AppointmentStatus.valueOf(normalized);
+    } catch (IllegalArgumentException exception) {
+      return AppointmentStatus.SCHEDULED;
+    }
+  }
+
+  private String normalizeId(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 }
