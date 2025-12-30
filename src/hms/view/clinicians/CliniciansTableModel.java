@@ -12,12 +12,16 @@ public class CliniciansTableModel extends AbstractTableModel {
 
   private final String[] columnNames = new String[] {
       "Clinician ID",
-      "Full Name",
+      "First Name",
+      "Last Name",
+      "Title",
+      "Speciality",
+      "GMC Number",
+      "Phone Number",
       "Email",
-      "Role",
-      "Qualification",
-      "Facility ID",
-      "Facility Name"
+      "Workplace",
+      "Employment Status",
+      "Start Date"
   };
 
   private List<Clinician> clinicians = new ArrayList<>();
@@ -59,25 +63,45 @@ public class CliniciansTableModel extends AbstractTableModel {
     }
 
     if (columnIndex == 0) {
-      return clinician.getId();
+      return safe(clinician.getId());
     }
     if (columnIndex == 1) {
-      return clinician.getFullName();
+      return safe(clinician.getFirstName());
     }
     if (columnIndex == 2) {
-      return clinician.getEmail();
+      return safe(clinician.getLastName());
     }
     if (columnIndex == 3) {
-      return clinician.getRole();
+      return safe(clinician.getTitle());
     }
     if (columnIndex == 4) {
-      return clinician.getQualification();
+      return safe(clinician.getSpeciality());
     }
     if (columnIndex == 5) {
-      return clinician.getFacilityId();
+      return safe(clinician.getGmcNumber());
     }
     if (columnIndex == 6) {
-      return facilityNamesByFacilityId.getOrDefault(safe(clinician.getFacilityId()), "");
+      return safe(clinician.getPhoneNumber());
+    }
+    if (columnIndex == 7) {
+      return safe(clinician.getEmail());
+    }
+    if (columnIndex == 8) {
+      String workplaceId = safe(clinician.getWorkplaceId());
+      if (workplaceId.isEmpty()) {
+        return "";
+      }
+      String name = safe(facilityNamesByFacilityId.get(workplaceId));
+      if (!name.isEmpty()) {
+        return name;
+      }
+      return "Facility " + workplaceId;
+    }
+    if (columnIndex == 9) {
+      return safe(clinician.getEmploymentStatus());
+    }
+    if (columnIndex == 10) {
+      return safe(clinician.getStartDate());
     }
 
     return "";

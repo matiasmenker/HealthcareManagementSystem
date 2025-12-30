@@ -15,8 +15,7 @@ public class StaffTableModel extends AbstractTableModel {
       "Full Name",
       "Email",
       "Role",
-      "Facility ID",
-      "Facility Name"
+      "Facility"
   };
 
   private List<Staff> staffMembers = new ArrayList<>();
@@ -58,22 +57,27 @@ public class StaffTableModel extends AbstractTableModel {
     }
 
     if (columnIndex == 0) {
-      return staff.getId();
+      return safe(staff.getId());
     }
     if (columnIndex == 1) {
-      return staff.getFullName();
+      return safe(staff.getFullName());
     }
     if (columnIndex == 2) {
-      return staff.getEmail();
+      return safe(staff.getEmail());
     }
     if (columnIndex == 3) {
-      return staff.getRole();
+      return safe(staff.getRole());
     }
     if (columnIndex == 4) {
-      return staff.getFacilityId();
-    }
-    if (columnIndex == 5) {
-      return facilityNamesByFacilityId.getOrDefault(safe(staff.getFacilityId()), "");
+      String facilityId = safe(staff.getFacilityId());
+      if (facilityId.isEmpty()) {
+        return "";
+      }
+      String facilityName = safe(facilityNamesByFacilityId.get(facilityId));
+      if (!facilityName.isEmpty()) {
+        return facilityName;
+      }
+      return "Facility " + facilityId;
     }
 
     return "";

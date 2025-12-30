@@ -33,16 +33,14 @@ public class ReferralController {
     return referralRepository.findAll();
   }
 
+  public void addReferral(Referral referral) {
+    validateReferral(referral);
+    referralRepository.add(referral);
+  }
+
   public void updateReferral(Referral referral) {
     validateReferral(referral);
     referralRepository.update(referral);
-  }
-
-  public void deleteReferral(String referralId) {
-    if (isBlank(referralId)) {
-      throw new IllegalArgumentException("Referral id is required");
-    }
-    referralRepository.delete(referralId);
   }
 
   private void validateReferral(Referral referral) {
@@ -65,6 +63,21 @@ public class ReferralController {
     }
     if (isBlank(referral.getReferredToFacilityId())) {
       throw new IllegalArgumentException("Referred facility is required");
+    }
+    if (isBlank(referral.getReferralDate())) {
+      throw new IllegalArgumentException("Referral date is required");
+    }
+    if (isBlank(referral.getUrgencyLevel())) {
+      throw new IllegalArgumentException("Urgency level is required");
+    }
+    if (referral.getStatus() == null) {
+      throw new IllegalArgumentException("Status is required");
+    }
+    if (isBlank(referral.getReferralReason())) {
+      throw new IllegalArgumentException("Referral reason is required");
+    }
+    if (isBlank(referral.getClinicalSummary())) {
+      throw new IllegalArgumentException("Clinical summary is required");
     }
 
     Patient patient = patientRepository.findById(referral.getPatientId());

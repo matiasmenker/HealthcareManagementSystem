@@ -66,10 +66,7 @@ public class PrescriptionsPanel extends JPanel {
       }
     });
 
-    buttonsActionsBar.setDeleteHandler(this::deleteSelectedPrescription);
-
     buttonsActionsBar.setEditEnabled(false);
-    buttonsActionsBar.setDeleteEnabled(false);
 
     prescriptionsTable.getSelectionModel().addListSelectionListener(event -> {
       if (event.getValueIsAdjusting()) {
@@ -77,7 +74,6 @@ public class PrescriptionsPanel extends JPanel {
       }
       boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
       buttonsActionsBar.setEditEnabled(hasSelection);
-      buttonsActionsBar.setDeleteEnabled(hasSelection);
     });
 
     add(buttonsActionsBar, BorderLayout.NORTH);
@@ -92,49 +88,7 @@ public class PrescriptionsPanel extends JPanel {
       Map<String, String> patientNamesByPatientId = buildPatientNamesByPatientId();
       Map<String, String> clinicianNamesByClinicianId = buildClinicianNamesByClinicianId();
       prescriptionsTableModel.setPrescriptions(prescriptions, patientNamesByPatientId, clinicianNamesByClinicianId);
-
-      boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
-      buttonsActionsBar.setEditEnabled(hasSelection);
-      buttonsActionsBar.setDeleteEnabled(hasSelection);
-    } catch (RuntimeException exception) {
-      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-    }
-  }
-
-  private void deleteSelectedPrescription() {
-    int selectedRowIndex = prescriptionsTable.getSelectedRow();
-    if (selectedRowIndex < 0) {
-      JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
-      return;
-    }
-
-    Prescription selectedPrescription = prescriptionsTableModel.getPrescriptionAtRow(selectedRowIndex);
-    if (selectedPrescription == null) {
-      JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
-      return;
-    }
-
-    String prescriptionId = safe(selectedPrescription.getId());
-    if (prescriptionId.isEmpty()) {
-      JOptionPane.showMessageDialog(this, "Selected prescription has no identifier.", "Delete", JOptionPane.ERROR_MESSAGE);
-      return;
-    }
-
-    int choice = JOptionPane.showConfirmDialog(
-        this,
-        "Delete prescription " + prescriptionId + "?",
-        "Confirm delete",
-        JOptionPane.YES_NO_OPTION
-    );
-
-    if (choice != JOptionPane.YES_OPTION) {
-      return;
-    }
-
-    try {
-      prescriptionController.deletePrescription(prescriptionId);
-      refreshPrescriptionsTable();
-      JOptionPane.showMessageDialog(this, "Prescription deleted: " + prescriptionId, "Deleted", JOptionPane.INFORMATION_MESSAGE);
+      buttonsActionsBar.setEditEnabled(prescriptionsTable.getSelectedRow() >= 0);
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -155,7 +109,7 @@ public class PrescriptionsPanel extends JPanel {
           FormFieldViewConfiguration.requiredEditable("dosage", "Dosage"),
           FormFieldViewConfiguration.requiredEditable("pharmacy", "Pharmacy"),
           FormFieldViewConfiguration.requiredEditable("collectionStatus", "Status"),
-          FormFieldViewConfiguration.requiredEditable("dateIssued", "Date Issued (YYYY-MM-DD)")
+          FormFieldViewConfiguration.requiredEditable("dateIssued", "Date Issued")
       );
 
       FormDialog formDialog = new FormDialog(owner, "Add Prescription", fieldViewConfigurations, Map.of());
@@ -213,18 +167,18 @@ public class PrescriptionsPanel extends JPanel {
           FormFieldViewConfiguration.requiredEditable("dosage", "Dosage"),
           FormFieldViewConfiguration.requiredEditable("pharmacy", "Pharmacy"),
           FormFieldViewConfiguration.requiredEditable("collectionStatus", "Status"),
-          FormFieldViewConfiguration.requiredEditable("dateIssued", "Date Issued (YYYY-MM-DD)")
+          FormFieldViewConfiguration.requiredEditable("dateIssued", "Date Issued")
       );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-      defaultValuesByKey.put("prescriptionId", selectedPrescription.getId());
-      defaultValuesByKey.put("patientId", selectedPrescription.getPatientId());
-      defaultValuesByKey.put("clinicianId", selectedPrescription.getClinicianId());
-      defaultValuesByKey.put("medication", selectedPrescription.getMedication());
-      defaultValuesByKey.put("dosage", selectedPrescription.getDosage());
-      defaultValuesByKey.put("pharmacy", selectedPrescription.getPharmacy());
-      defaultValuesByKey.put("collectionStatus", selectedPrescription.getCollectionStatus());
-      defaultValuesByKey.put("dateIssued", selectedPrescription.getDateIssued());
+      defaultValuesByKey.put("prescriptionId", safe(selectedPrescription.getId()));
+      defaultValuesByKey.put("patientId", safe(selectedPrescription.getPatientId()));
+      defaultValuesByKey.put("clinicianId", safe(selectedPrescription.getClinicianId()));
+      defaultValuesByKey.put("medication", safe(selectedPrescription.getMedication()));
+      defaultValuesByKey.put("dosage", safe(selectedPrescription.getDosage()));
+      defaultValuesByKey.put("pharmacy", safe(selectedPrescription.getPharmacy()));
+      defaultValuesByKey.put("collectionStatus", safe(selectedPrescription.getCollectionStatus()));
+      defaultValuesByKey.put("dateIssued", safe(selectedPrescription.getDateIssued()));
 
       FormDialog formDialog = new FormDialog(owner, "Edit Prescription", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
@@ -266,7 +220,7 @@ public class PrescriptionsPanel extends JPanel {
         continue;
       }
       String name = safe(patient.getFullName());
-      String label = name.isEmpty() ? ("Patient ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Patient " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
@@ -284,7 +238,7 @@ public class PrescriptionsPanel extends JPanel {
         continue;
       }
       String name = safe(clinician.getFullName());
-      String label = name.isEmpty() ? ("Clinician ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Clinician " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;

@@ -116,7 +116,7 @@ public class PatientsPanel extends JPanel {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
-      List<FormFieldViewConfiguration> fieldViewConfigurations = buildPatientFieldViewConfigurations();
+      List<FormFieldViewConfiguration> fieldViewConfigurations = buildPatientFieldViewConfigurationsForAdd();
 
       FormDialog formDialog = new FormDialog(owner, "Add Patient", fieldViewConfigurations, Map.of());
       formDialog.setVisible(true);
@@ -131,9 +131,9 @@ public class PatientsPanel extends JPanel {
           valuesByKey.getOrDefault("patientId", ""),
           valuesByKey.getOrDefault("fullName", ""),
           valuesByKey.getOrDefault("email", ""),
-          valuesByKey.getOrDefault("nhsNumber", ""),
-          valuesByKey.getOrDefault("phone", ""),
-          valuesByKey.getOrDefault("address", ""),
+          "",
+          "",
+          "",
           valuesByKey.getOrDefault("registeredFacilityId", "")
       );
 
@@ -167,9 +167,6 @@ public class PatientsPanel extends JPanel {
       defaultValuesByKey.put("patientId", safe(selectedPatient.getId()));
       defaultValuesByKey.put("fullName", safe(selectedPatient.getFullName()));
       defaultValuesByKey.put("email", safe(selectedPatient.getEmail()));
-      defaultValuesByKey.put("nhsNumber", safe(selectedPatient.getNhsNumber()));
-      defaultValuesByKey.put("phone", safe(selectedPatient.getPhone()));
-      defaultValuesByKey.put("address", safe(selectedPatient.getAddress()));
       defaultValuesByKey.put("registeredFacilityId", safe(selectedPatient.getRegisteredFacilityId()));
 
       FormDialog formDialog = new FormDialog(owner, "Edit Patient", fieldViewConfigurations, defaultValuesByKey);
@@ -185,9 +182,9 @@ public class PatientsPanel extends JPanel {
           selectedPatient.getId(),
           valuesByKey.getOrDefault("fullName", ""),
           valuesByKey.getOrDefault("email", ""),
-          valuesByKey.getOrDefault("nhsNumber", ""),
-          valuesByKey.getOrDefault("phone", ""),
-          valuesByKey.getOrDefault("address", ""),
+          safe(selectedPatient.getNhsNumber()),
+          safe(selectedPatient.getPhone()),
+          safe(selectedPatient.getAddress()),
           valuesByKey.getOrDefault("registeredFacilityId", "")
       );
 
@@ -199,15 +196,12 @@ public class PatientsPanel extends JPanel {
     }
   }
 
-  private List<FormFieldViewConfiguration> buildPatientFieldViewConfigurations() {
+  private List<FormFieldViewConfiguration> buildPatientFieldViewConfigurationsForAdd() {
     if (facilityController == null) {
       return List.of(
           FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
           FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
           FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
-          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
-          FormFieldViewConfiguration.requiredEditable("address", "Address"),
           FormFieldViewConfiguration.requiredEditable("registeredFacilityId", "Registered Facility")
       );
     }
@@ -217,9 +211,6 @@ public class PatientsPanel extends JPanel {
         FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
         FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
         FormFieldViewConfiguration.requiredEditable("email", "Email"),
-        FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
-        FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
-        FormFieldViewConfiguration.requiredEditable("address", "Address"),
         FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
     );
   }
@@ -230,9 +221,6 @@ public class PatientsPanel extends JPanel {
           FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
           FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
           FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
-          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
-          FormFieldViewConfiguration.requiredEditable("address", "Address"),
           FormFieldViewConfiguration.requiredEditable("registeredFacilityId", "Registered Facility")
       );
     }
@@ -242,9 +230,6 @@ public class PatientsPanel extends JPanel {
         FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
         FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
         FormFieldViewConfiguration.requiredEditable("email", "Email"),
-        FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
-        FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
-        FormFieldViewConfiguration.requiredEditable("address", "Address"),
         FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
     );
   }

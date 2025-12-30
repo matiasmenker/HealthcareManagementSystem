@@ -67,10 +67,10 @@ public class PrescriptionsTableModel extends AbstractTableModel {
       return safe(prescription.getId());
     }
     if (columnIndex == 1) {
-      return resolveNameOrFallbackId(safe(prescription.getPatientId()), patientNamesByPatientId, "Patient");
+      return resolveLabel(prescription.getPatientId(), patientNamesByPatientId, "Patient");
     }
     if (columnIndex == 2) {
-      return resolveNameOrFallbackId(safe(prescription.getClinicianId()), clinicianNamesByClinicianId, "Clinician");
+      return resolveLabel(prescription.getClinicianId(), clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 3) {
       return safe(prescription.getMedication());
@@ -91,15 +91,16 @@ public class PrescriptionsTableModel extends AbstractTableModel {
     return "";
   }
 
-  private String resolveNameOrFallbackId(String id, Map<String, String> namesById, String label) {
-    if (id.isEmpty()) {
+  private String resolveLabel(String id, Map<String, String> namesById, String fallbackPrefix) {
+    String safeId = safe(id);
+    if (safeId.isEmpty()) {
       return "";
     }
-    String name = safe(namesById.get(id));
+    String name = safe(namesById.get(safeId));
     if (!name.isEmpty()) {
       return name;
     }
-    return label + " " + id;
+    return fallbackPrefix + " " + safeId;
   }
 
   private String safe(String value) {

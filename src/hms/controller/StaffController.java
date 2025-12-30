@@ -8,54 +8,51 @@ import java.util.Objects;
 
 public class StaffController {
 
-	private final StaffRepository staffRepository;
+  private final StaffRepository staffRepository;
 
-	public StaffController(StaffRepository staffRepository) {
-		this.staffRepository = Objects.requireNonNull(staffRepository, "staffRepository");
-	}
+  public StaffController(StaffRepository staffRepository) {
+    this.staffRepository = Objects.requireNonNull(staffRepository, "staffRepository");
+  }
 
-	public void loadStaffFromCsv(String filePath) {
-		staffRepository.load(filePath);
-	}
+  public void loadStaffFromCsv(String filePath) {
+    staffRepository.load(filePath);
+  }
 
-	public List<Staff> getAllStaff() {
-		return staffRepository.findAll();
-	}
+  public List<Staff> getAllStaff() {
+    return staffRepository.findAll();
+  }
 
-	public Staff getStaffById(String staffId) {
-		if (staffId == null || staffId.trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff id is required");
-		}
+  public void addStaff(Staff staff) {
+    validateStaff(staff);
+    staffRepository.add(staff);
+  }
 
-		Staff staff = staffRepository.findById(staffId);
-		if (staff == null) {
-			throw new IllegalArgumentException("Staff not found: " + staffId);
-		}
+  public void updateStaff(Staff staff) {
+    validateStaff(staff);
+    staffRepository.update(staff);
+  }
 
-		return staff;
-	}
+  private void validateStaff(Staff staff) {
+    Objects.requireNonNull(staff, "staff");
 
-	public void addStaff(Staff staff) {
-		validateStaff(staff);
-		staffRepository.add(staff);
-	}
+    if (isBlank(staff.getId())) {
+      throw new IllegalArgumentException("Staff id is required");
+    }
+    if (isBlank(staff.getFullName())) {
+      throw new IllegalArgumentException("Full name is required");
+    }
+    if (isBlank(staff.getEmail())) {
+      throw new IllegalArgumentException("Email is required");
+    }
+    if (isBlank(staff.getRole())) {
+      throw new IllegalArgumentException("Role is required");
+    }
+    if (isBlank(staff.getFacilityId())) {
+      throw new IllegalArgumentException("Facility is required");
+    }
+  }
 
-	public void updateStaff(Staff staff) {
-		validateStaff(staff);
-		staffRepository.update(staff);
-	}
-
-	private void validateStaff(Staff staff) {
-		Objects.requireNonNull(staff, "staff");
-
-		if (staff.getId() == null || staff.getId().trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff id is required");
-		}
-		if (staff.getFullName() == null || staff.getFullName().trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff full name is required");
-		}
-		if (staff.getRole() == null || staff.getRole().trim().isEmpty()) {
-			throw new IllegalArgumentException("Staff role is required");
-		}
-	}
+  private boolean isBlank(String value) {
+    return value == null || value.trim().isEmpty();
+  }
 }

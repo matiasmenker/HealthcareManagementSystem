@@ -187,7 +187,16 @@ public class Referral {
 
   @Override
   public String toString() {
-    return "Referral{id='" + safe(id) + "', patientId='" + safe(patientId) + "', status='" + (status == null ? "" : status.name()) + "'}";
+    return "Referral{id='" + safe(id)
+        + "', patientId='" + safe(patientId)
+        + "', referringClinicianId='" + safe(referringClinicianId)
+        + "', referredToClinicianId='" + safe(referredToClinicianId)
+        + "', referringFacilityId='" + safe(referringFacilityId)
+        + "', referredToFacilityId='" + safe(referredToFacilityId)
+        + "', referralDate='" + safe(referralDate)
+        + "', urgencyLevel='" + safe(urgencyLevel)
+        + "', status='" + (status == null ? "" : status.name())
+        + "'}";
   }
 
   @Override

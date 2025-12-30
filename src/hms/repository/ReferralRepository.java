@@ -33,18 +33,17 @@ public class ReferralRepository extends BaseRepository {
   }
 
   public Referral findById(String referralId) {
-    String normalizedId = normalizeId(referralId);
-    if (normalizedId.isEmpty()) {
+    if (referralId == null) {
       return null;
     }
-    return referralsById.get(normalizedId);
+    return referralsById.get(referralId);
   }
 
   public void add(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
-    String referralId = normalizeId(referral.getId());
-    if (referralId.isEmpty()) {
+    String referralId = referral.getId();
+    if (referralId == null || referralId.trim().isEmpty()) {
       throw new IllegalArgumentException("Referral id is required");
     }
     if (referralsById.containsKey(referralId)) {
@@ -58,8 +57,8 @@ public class ReferralRepository extends BaseRepository {
   public void update(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
-    String referralId = normalizeId(referral.getId());
-    if (referralId.isEmpty()) {
+    String referralId = referral.getId();
+    if (referralId == null || referralId.trim().isEmpty()) {
       throw new IllegalArgumentException("Referral id is required");
     }
 
@@ -83,21 +82,6 @@ public class ReferralRepository extends BaseRepository {
     existing.setNotes(referral.getNotes());
     existing.setCreatedDate(referral.getCreatedDate());
     existing.setLastUpdated(referral.getLastUpdated());
-  }
-
-  public void delete(String referralId) {
-    String normalizedId = normalizeId(referralId);
-    if (normalizedId.isEmpty()) {
-      throw new IllegalArgumentException("Referral id is required");
-    }
-
-    Referral existing = referralsById.get(normalizedId);
-    if (existing == null) {
-      throw new IllegalArgumentException("Referral not found: " + normalizedId);
-    }
-
-    referrals.remove(existing);
-    referralsById.remove(normalizedId);
   }
 
   private Referral mapRowToReferral(Map<String, String> row) {
@@ -177,12 +161,5 @@ public class ReferralRepository extends BaseRepository {
     }
 
     return ReferralStatus.CREATED;
-  }
-
-  private String normalizeId(String value) {
-    if (value == null) {
-      return "";
-    }
-    return value.trim();
   }
 }

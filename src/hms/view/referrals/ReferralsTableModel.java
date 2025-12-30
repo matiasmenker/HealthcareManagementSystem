@@ -1,6 +1,7 @@
 package hms.view.referrals;
 
 import hms.model.Referral;
+import hms.model.enums.ReferralStatus;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
@@ -17,11 +18,13 @@ public class ReferralsTableModel extends AbstractTableModel {
       "Referred Clinician",
       "Referring Facility",
       "Referred Facility",
+      "Referral Date",
       "Urgency Level",
       "Status",
-      "Referral Date",
-      "Created Date",
-      "Last Updated"
+      "Referral Reason",
+      "Clinical Summary",
+      "Requested Investigations",
+      "Notes"
   };
 
   private List<Referral> referrals = new ArrayList<>();
@@ -73,48 +76,56 @@ public class ReferralsTableModel extends AbstractTableModel {
       return safe(referral.getId());
     }
     if (columnIndex == 1) {
-      return resolveNameOrFallbackId(safe(referral.getPatientId()), patientNamesByPatientId, "Patient");
+      return resolveLabel(referral.getPatientId(), patientNamesByPatientId, "Patient");
     }
     if (columnIndex == 2) {
-      return resolveNameOrFallbackId(safe(referral.getReferringClinicianId()), clinicianNamesByClinicianId, "Clinician");
+      return resolveLabel(referral.getReferringClinicianId(), clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 3) {
-      return resolveNameOrFallbackId(safe(referral.getReferredToClinicianId()), clinicianNamesByClinicianId, "Clinician");
+      return resolveLabel(referral.getReferredToClinicianId(), clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 4) {
-      return resolveNameOrFallbackId(safe(referral.getReferringFacilityId()), facilityNamesByFacilityId, "Facility");
+      return resolveLabel(referral.getReferringFacilityId(), facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 5) {
-      return resolveNameOrFallbackId(safe(referral.getReferredToFacilityId()), facilityNamesByFacilityId, "Facility");
+      return resolveLabel(referral.getReferredToFacilityId(), facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 6) {
-      return safe(referral.getUrgencyLevel());
-    }
-    if (columnIndex == 7) {
-      return referral.getStatus() == null ? "" : referral.getStatus().name();
-    }
-    if (columnIndex == 8) {
       return safe(referral.getReferralDate());
     }
+    if (columnIndex == 7) {
+      return safe(referral.getUrgencyLevel());
+    }
+    if (columnIndex == 8) {
+      ReferralStatus status = referral.getStatus();
+      return status == null ? "" : status.name();
+    }
     if (columnIndex == 9) {
-      return safe(referral.getCreatedDate());
+      return safe(referral.getReferralReason());
     }
     if (columnIndex == 10) {
-      return safe(referral.getLastUpdated());
+      return safe(referral.getClinicalSummary());
+    }
+    if (columnIndex == 11) {
+      return safe(referral.getRequestedInvestigations());
+    }
+    if (columnIndex == 12) {
+      return safe(referral.getNotes());
     }
 
     return "";
   }
 
-  private String resolveNameOrFallbackId(String id, Map<String, String> namesById, String label) {
-    if (id.isEmpty()) {
+  private String resolveLabel(String id, Map<String, String> namesById, String fallbackPrefix) {
+    String safeId = safe(id);
+    if (safeId.isEmpty()) {
       return "";
     }
-    String name = safe(namesById.get(id));
+    String name = safe(namesById.get(safeId));
     if (!name.isEmpty()) {
       return name;
     }
-    return label + " " + id;
+    return fallbackPrefix + " " + safeId;
   }
 
   private String safe(String value) {

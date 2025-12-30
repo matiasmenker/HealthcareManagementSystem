@@ -87,19 +87,57 @@ public class CliniciansPanel extends JPanel {
     }
   }
 
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> namesById = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      namesById.put(id, safe(facility.getName()));
+    }
+    return namesById;
+  }
+
+  private Map<String, String> buildFacilityTypesByFacilityId() {
+    Map<String, String> typesById = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      typesById.put(id, safe(facility.getType()));
+    }
+    return typesById;
+  }
+
   private void openAddClinicianDialog() {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
-      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+      List<SelectionItem> workplaceOptions = buildFacilitySelectionItems();
+      Map<String, String> facilityTypesByFacilityId = buildFacilityTypesByFacilityId();
 
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredEditable("clinicianId", "Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("firstName", "First Name"),
+          FormFieldViewConfiguration.requiredEditable("lastName", "Last Name"),
+          FormFieldViewConfiguration.requiredEditable("title", "Title"),
+          FormFieldViewConfiguration.requiredEditable("speciality", "Speciality"),
+          FormFieldViewConfiguration.requiredEditable("gmcNumber", "GMC Number"),
+          FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
           FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("role", "Role"),
-          FormFieldViewConfiguration.requiredEditable("qualification", "Qualification"),
-          FormFieldViewConfiguration.requiredSelect("facilityId", "Facility", facilityOptions)
+          FormFieldViewConfiguration.requiredSelect("workplaceId", "Workplace", workplaceOptions),
+          FormFieldViewConfiguration.requiredEditable("employmentStatus", "Employment Status"),
+          FormFieldViewConfiguration.requiredEditable("startDate", "Start Date (YYYY-MM-DD)")
       );
 
       FormDialog formDialog = new FormDialog(owner, "Add Clinician", fieldViewConfigurations, Map.of());
@@ -111,13 +149,22 @@ public class CliniciansPanel extends JPanel {
 
       Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
+      String workplaceId = valuesByKey.getOrDefault("workplaceId", "");
+      String workplaceType = facilityTypesByFacilityId.getOrDefault(workplaceId, "");
+
       Clinician clinician = new Clinician(
           valuesByKey.getOrDefault("clinicianId", ""),
-          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("firstName", ""),
+          valuesByKey.getOrDefault("lastName", ""),
+          valuesByKey.getOrDefault("title", ""),
+          valuesByKey.getOrDefault("speciality", ""),
+          valuesByKey.getOrDefault("gmcNumber", ""),
+          valuesByKey.getOrDefault("phoneNumber", ""),
           valuesByKey.getOrDefault("email", ""),
-          valuesByKey.getOrDefault("role", ""),
-          valuesByKey.getOrDefault("qualification", ""),
-          valuesByKey.getOrDefault("facilityId", "")
+          workplaceId,
+          workplaceType,
+          valuesByKey.getOrDefault("employmentStatus", ""),
+          valuesByKey.getOrDefault("startDate", "")
       );
 
       clinicianController.addClinician(clinician);
@@ -144,24 +191,35 @@ public class CliniciansPanel extends JPanel {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
-      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+      List<SelectionItem> workplaceOptions = buildFacilitySelectionItems();
+      Map<String, String> facilityTypesByFacilityId = buildFacilityTypesByFacilityId();
 
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredReadOnly("clinicianId", "Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("firstName", "First Name"),
+          FormFieldViewConfiguration.requiredEditable("lastName", "Last Name"),
+          FormFieldViewConfiguration.requiredEditable("title", "Title"),
+          FormFieldViewConfiguration.requiredEditable("speciality", "Speciality"),
+          FormFieldViewConfiguration.requiredEditable("gmcNumber", "GMC Number"),
+          FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
           FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("role", "Role"),
-          FormFieldViewConfiguration.requiredEditable("qualification", "Qualification"),
-          FormFieldViewConfiguration.requiredSelect("facilityId", "Facility", facilityOptions)
+          FormFieldViewConfiguration.requiredSelect("workplaceId", "Workplace", workplaceOptions),
+          FormFieldViewConfiguration.requiredEditable("employmentStatus", "Employment Status"),
+          FormFieldViewConfiguration.requiredEditable("startDate", "Start Date (YYYY-MM-DD)")
       );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-      defaultValuesByKey.put("clinicianId", selectedClinician.getId());
-      defaultValuesByKey.put("fullName", selectedClinician.getFullName());
-      defaultValuesByKey.put("email", selectedClinician.getEmail());
-      defaultValuesByKey.put("role", selectedClinician.getRole());
-      defaultValuesByKey.put("qualification", selectedClinician.getQualification());
-      defaultValuesByKey.put("facilityId", selectedClinician.getFacilityId());
+      defaultValuesByKey.put("clinicianId", safe(selectedClinician.getId()));
+      defaultValuesByKey.put("firstName", safe(selectedClinician.getFirstName()));
+      defaultValuesByKey.put("lastName", safe(selectedClinician.getLastName()));
+      defaultValuesByKey.put("title", safe(selectedClinician.getTitle()));
+      defaultValuesByKey.put("speciality", safe(selectedClinician.getSpeciality()));
+      defaultValuesByKey.put("gmcNumber", safe(selectedClinician.getGmcNumber()));
+      defaultValuesByKey.put("phoneNumber", safe(selectedClinician.getPhoneNumber()));
+      defaultValuesByKey.put("email", safe(selectedClinician.getEmail()));
+      defaultValuesByKey.put("workplaceId", safe(selectedClinician.getWorkplaceId()));
+      defaultValuesByKey.put("employmentStatus", safe(selectedClinician.getEmploymentStatus()));
+      defaultValuesByKey.put("startDate", safe(selectedClinician.getStartDate()));
 
       FormDialog formDialog = new FormDialog(owner, "Edit Clinician", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
@@ -172,13 +230,22 @@ public class CliniciansPanel extends JPanel {
 
       Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
+      String workplaceId = valuesByKey.getOrDefault("workplaceId", "");
+      String workplaceType = facilityTypesByFacilityId.getOrDefault(workplaceId, safe(selectedClinician.getWorkplaceType()));
+
       Clinician updatedClinician = new Clinician(
           selectedClinician.getId(),
-          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("firstName", ""),
+          valuesByKey.getOrDefault("lastName", ""),
+          valuesByKey.getOrDefault("title", ""),
+          valuesByKey.getOrDefault("speciality", ""),
+          valuesByKey.getOrDefault("gmcNumber", ""),
+          valuesByKey.getOrDefault("phoneNumber", ""),
           valuesByKey.getOrDefault("email", ""),
-          valuesByKey.getOrDefault("role", ""),
-          valuesByKey.getOrDefault("qualification", ""),
-          valuesByKey.getOrDefault("facilityId", "")
+          workplaceId,
+          workplaceType,
+          valuesByKey.getOrDefault("employmentStatus", ""),
+          valuesByKey.getOrDefault("startDate", "")
       );
 
       clinicianController.updateClinician(updatedClinician);
@@ -189,25 +256,9 @@ public class CliniciansPanel extends JPanel {
     }
   }
 
-  private Map<String, String> buildFacilityNamesByFacilityId() {
-    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
-    List<Facility> facilities = facilityController.getAllFacilities();
-    for (Facility facility : facilities) {
-      if (facility == null) {
-        continue;
-      }
-      String id = safe(facility.getId());
-      if (id.isEmpty()) {
-        continue;
-      }
-      facilityNamesByFacilityId.put(id, safe(facility.getName()));
-    }
-    return facilityNamesByFacilityId;
-  }
-
   private List<SelectionItem> buildFacilitySelectionItems() {
-    List<Facility> facilities = facilityController.getAllFacilities();
     List<SelectionItem> items = new java.util.ArrayList<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
     for (Facility facility : facilities) {
       if (facility == null) {
         continue;
@@ -217,7 +268,7 @@ public class CliniciansPanel extends JPanel {
         continue;
       }
       String name = safe(facility.getName());
-      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Facility " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;

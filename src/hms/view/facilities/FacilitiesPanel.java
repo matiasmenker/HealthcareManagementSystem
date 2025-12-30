@@ -13,6 +13,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
+import javax.swing.table.TableColumn;
 import java.awt.BorderLayout;
 import java.awt.Window;
 import java.util.LinkedHashMap;
@@ -22,183 +23,229 @@ import java.util.Objects;
 
 public class FacilitiesPanel extends JPanel {
 
-	private final FacilityController facilityController;
-	private final FacilitiesTableModel facilitiesTableModel;
-	private final JTable facilitiesTable;
-	private final ButtonsActionsBar buttonsActionsBar;
+  private final FacilityController facilityController;
 
-	public FacilitiesPanel(FacilityController facilityController) {
-		this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
+  private final FacilitiesTableModel facilitiesTableModel;
+  private final JTable facilitiesTable;
+  private final ButtonsActionsBar buttonsActionsBar;
 
-		setLayout(new BorderLayout(10, 10));
-		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+  public FacilitiesPanel(FacilityController facilityController) {
+    this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
 
-		facilitiesTableModel = new FacilitiesTableModel();
-		facilitiesTable = new JTable(facilitiesTableModel);
-		facilitiesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    setLayout(new BorderLayout(10, 10));
+    setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
-			@Override
-			public void onAdd() {
-				openAddFacilityDialog();
-			}
+    facilitiesTableModel = new FacilitiesTableModel();
+    facilitiesTable = new JTable(facilitiesTableModel);
+    facilitiesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    facilitiesTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
-			@Override
-			public void onEdit() {
-				openEditFacilityDialog();
-			}
+    configureColumnWidths();
 
-			@Override
-			public void onRefresh() {
-				refreshFacilitiesTable();
-			}
-		});
+    buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
+      @Override
+      public void onAdd() {
+        openAddFacilityDialog();
+      }
 
-		buttonsActionsBar.setEditEnabled(false);
+      @Override
+      public void onEdit() {
+        openEditFacilityDialog();
+      }
 
-		facilitiesTable.getSelectionModel().addListSelectionListener(event -> {
-			if (event.getValueIsAdjusting()) {
-				return;
-			}
-			boolean hasSelection = facilitiesTable.getSelectedRow() >= 0;
-			buttonsActionsBar.setEditEnabled(hasSelection);
-		});
+      @Override
+      public void onRefresh() {
+        refreshFacilitiesTable();
+      }
+    });
 
-		add(buttonsActionsBar, BorderLayout.NORTH);
-		add(new JScrollPane(facilitiesTable), BorderLayout.CENTER);
+    buttonsActionsBar.setEditEnabled(false);
 
-		refreshFacilitiesTable();
-	}
+    facilitiesTable.getSelectionModel().addListSelectionListener(event -> {
+      if (event.getValueIsAdjusting()) {
+        return;
+      }
+      boolean hasSelection = facilitiesTable.getSelectedRow() >= 0;
+      buttonsActionsBar.setEditEnabled(hasSelection);
+    });
 
-	private void refreshFacilitiesTable() {
-		try {
-			List<Facility> facilities = facilityController.getAllFacilities();
-			facilitiesTableModel.setFacilities(facilities);
-			buttonsActionsBar.setEditEnabled(facilitiesTable.getSelectedRow() >= 0);
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+    add(buttonsActionsBar, BorderLayout.NORTH);
+    add(new JScrollPane(facilitiesTable), BorderLayout.CENTER);
 
-	private void openAddFacilityDialog() {
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+    refreshFacilitiesTable();
+  }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredEditable("facilityId", "Facility ID"),
-					FormFieldViewConfiguration.requiredEditable("facilityName", "Name"),
-					FormFieldViewConfiguration.requiredEditable("facilityType", "Type"),
-					FormFieldViewConfiguration.requiredEditable("address", "Address"),
-					FormFieldViewConfiguration.optionalEditable("postcode", "Postcode"),
-					FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.optionalEditable("openingHours", "Opening Hours"),
-					FormFieldViewConfiguration.optionalEditable("managerName", "Manager Name"),
-					FormFieldViewConfiguration.requiredEditable("capacity", "Capacity"),
-					FormFieldViewConfiguration.optionalEditable("specialitiesOffered", "Specialities Offered"));
+  private void refreshFacilitiesTable() {
+    try {
+      List<Facility> facilities = facilityController.getAllFacilities();
+      facilitiesTableModel.setFacilities(facilities);
+      buttonsActionsBar.setEditEnabled(facilitiesTable.getSelectedRow() >= 0);
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-			FormDialog formDialog = new FormDialog(owner, "Add Facility", fieldViewConfigurations, Map.of());
-			formDialog.setVisible(true);
+  private void openAddFacilityDialog() {
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredEditable("facilityId", "Facility ID"),
+          FormFieldViewConfiguration.requiredEditable("facilityName", "Facility Name"),
+          FormFieldViewConfiguration.requiredEditable("facilityType", "Facility Type"),
+          FormFieldViewConfiguration.requiredEditable("address", "Address"),
+          FormFieldViewConfiguration.requiredEditable("postcode", "Postcode"),
+          FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("openingHours", "Opening Hours"),
+          FormFieldViewConfiguration.requiredEditable("managerName", "Manager Name"),
+          FormFieldViewConfiguration.requiredEditable("capacity", "Capacity"),
+          FormFieldViewConfiguration.requiredEditable("specialitiesOffered", "Specialities Offered")
+      );
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      FormDialog formDialog = new FormDialog(owner, "Add Facility", fieldViewConfigurations, Map.of());
+      formDialog.setVisible(true);
 
-			Facility facility = new Facility(valuesByKey.getOrDefault("facilityId", ""),
-					valuesByKey.getOrDefault("facilityName", ""), valuesByKey.getOrDefault("facilityType", ""),
-					valuesByKey.getOrDefault("address", ""), valuesByKey.getOrDefault("postcode", ""),
-					valuesByKey.getOrDefault("phoneNumber", ""), valuesByKey.getOrDefault("email", ""),
-					valuesByKey.getOrDefault("openingHours", ""), valuesByKey.getOrDefault("managerName", ""),
-					valuesByKey.getOrDefault("capacity", ""), valuesByKey.getOrDefault("specialitiesOffered", ""));
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-			facilityController.addFacility(facility);
-			refreshFacilitiesTable();
-			selectFacilityById(facility.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-	private void openEditFacilityDialog() {
-		int selectedRowIndex = facilitiesTable.getSelectedRow();
-		if (selectedRowIndex < 0) {
-			JOptionPane.showMessageDialog(this, "Select a facility to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      Facility facility = new Facility(
+          valuesByKey.getOrDefault("facilityId", ""),
+          valuesByKey.getOrDefault("facilityName", ""),
+          valuesByKey.getOrDefault("facilityType", ""),
+          valuesByKey.getOrDefault("address", ""),
+          valuesByKey.getOrDefault("postcode", ""),
+          valuesByKey.getOrDefault("phoneNumber", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("openingHours", ""),
+          valuesByKey.getOrDefault("managerName", ""),
+          valuesByKey.getOrDefault("capacity", ""),
+          valuesByKey.getOrDefault("specialitiesOffered", "")
+      );
 
-		Facility selectedFacility = facilitiesTableModel.getFacilityAtRow(selectedRowIndex);
-		if (selectedFacility == null) {
-			JOptionPane.showMessageDialog(this, "Select a facility to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      facilityController.addFacility(facility);
+      refreshFacilitiesTable();
+      selectFacilityById(facility.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+  private void openEditFacilityDialog() {
+    int selectedRowIndex = facilitiesTable.getSelectedRow();
+    if (selectedRowIndex < 0) {
+      JOptionPane.showMessageDialog(this, "Select a facility to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredReadOnly("facilityId", "Facility ID"),
-					FormFieldViewConfiguration.requiredEditable("facilityName", "Name"),
-					FormFieldViewConfiguration.requiredEditable("facilityType", "Type"),
-					FormFieldViewConfiguration.requiredEditable("address", "Address"),
-					FormFieldViewConfiguration.optionalEditable("postcode", "Postcode"),
-					FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.optionalEditable("openingHours", "Opening Hours"),
-					FormFieldViewConfiguration.optionalEditable("managerName", "Manager Name"),
-					FormFieldViewConfiguration.requiredEditable("capacity", "Capacity"),
-					FormFieldViewConfiguration.optionalEditable("specialitiesOffered", "Specialities Offered"));
+    Facility selectedFacility = facilitiesTableModel.getFacilityAtRow(selectedRowIndex);
+    if (selectedFacility == null) {
+      JOptionPane.showMessageDialog(this, "Select a facility to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-			defaultValuesByKey.put("facilityId", selectedFacility.getId());
-			defaultValuesByKey.put("facilityName", selectedFacility.getName());
-			defaultValuesByKey.put("facilityType", selectedFacility.getType());
-			defaultValuesByKey.put("address", selectedFacility.getAddress());
-			defaultValuesByKey.put("postcode", selectedFacility.getPostcode());
-			defaultValuesByKey.put("phoneNumber", selectedFacility.getPhoneNumber());
-			defaultValuesByKey.put("email", selectedFacility.getEmail());
-			defaultValuesByKey.put("openingHours", selectedFacility.getOpeningHours());
-			defaultValuesByKey.put("managerName", selectedFacility.getManagerName());
-			defaultValuesByKey.put("capacity", selectedFacility.getCapacity());
-			defaultValuesByKey.put("specialitiesOffered", selectedFacility.getSpecialitiesOffered());
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			FormDialog formDialog = new FormDialog(owner, "Edit Facility", fieldViewConfigurations, defaultValuesByKey);
-			formDialog.setVisible(true);
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredReadOnly("facilityId", "Facility ID"),
+          FormFieldViewConfiguration.requiredEditable("facilityName", "Facility Name"),
+          FormFieldViewConfiguration.requiredEditable("facilityType", "Facility Type"),
+          FormFieldViewConfiguration.requiredEditable("address", "Address"),
+          FormFieldViewConfiguration.requiredEditable("postcode", "Postcode"),
+          FormFieldViewConfiguration.requiredEditable("phoneNumber", "Phone Number"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("openingHours", "Opening Hours"),
+          FormFieldViewConfiguration.requiredEditable("managerName", "Manager Name"),
+          FormFieldViewConfiguration.requiredEditable("capacity", "Capacity"),
+          FormFieldViewConfiguration.requiredEditable("specialitiesOffered", "Specialities Offered")
+      );
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
+      defaultValuesByKey.put("facilityId", safe(selectedFacility.getId()));
+      defaultValuesByKey.put("facilityName", safe(selectedFacility.getName()));
+      defaultValuesByKey.put("facilityType", safe(selectedFacility.getType()));
+      defaultValuesByKey.put("address", safe(selectedFacility.getAddress()));
+      defaultValuesByKey.put("postcode", safe(selectedFacility.getPostcode()));
+      defaultValuesByKey.put("phoneNumber", safe(selectedFacility.getPhoneNumber()));
+      defaultValuesByKey.put("email", safe(selectedFacility.getEmail()));
+      defaultValuesByKey.put("openingHours", safe(selectedFacility.getOpeningHours()));
+      defaultValuesByKey.put("managerName", safe(selectedFacility.getManagerName()));
+      defaultValuesByKey.put("capacity", safe(selectedFacility.getCapacity()));
+      defaultValuesByKey.put("specialitiesOffered", safe(selectedFacility.getSpecialitiesOffered()));
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      FormDialog formDialog = new FormDialog(owner, "Edit Facility", fieldViewConfigurations, defaultValuesByKey);
+      formDialog.setVisible(true);
 
-			Facility updatedFacility = new Facility(selectedFacility.getId(),
-					valuesByKey.getOrDefault("facilityName", ""), valuesByKey.getOrDefault("facilityType", ""),
-					valuesByKey.getOrDefault("address", ""), valuesByKey.getOrDefault("postcode", ""),
-					valuesByKey.getOrDefault("phoneNumber", ""), valuesByKey.getOrDefault("email", ""),
-					valuesByKey.getOrDefault("openingHours", ""), valuesByKey.getOrDefault("managerName", ""),
-					valuesByKey.getOrDefault("capacity", ""), valuesByKey.getOrDefault("specialitiesOffered", ""));
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-			facilityController.updateFacility(updatedFacility);
-			refreshFacilitiesTable();
-			selectFacilityById(updatedFacility.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-	private void selectFacilityById(String facilityId) {
-		if (facilityId == null || facilityId.trim().isEmpty()) {
-			return;
-		}
+      Facility updatedFacility = new Facility(
+          selectedFacility.getId(),
+          valuesByKey.getOrDefault("facilityName", ""),
+          valuesByKey.getOrDefault("facilityType", ""),
+          valuesByKey.getOrDefault("address", ""),
+          valuesByKey.getOrDefault("postcode", ""),
+          valuesByKey.getOrDefault("phoneNumber", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("openingHours", ""),
+          valuesByKey.getOrDefault("managerName", ""),
+          valuesByKey.getOrDefault("capacity", ""),
+          valuesByKey.getOrDefault("specialitiesOffered", "")
+      );
 
-		for (int rowIndex = 0; rowIndex < facilitiesTableModel.getRowCount(); rowIndex++) {
-			Facility facility = facilitiesTableModel.getFacilityAtRow(rowIndex);
-			if (facility != null && facilityId.equals(facility.getId())) {
-				facilitiesTable.setRowSelectionInterval(rowIndex, rowIndex);
-				facilitiesTable.scrollRectToVisible(facilitiesTable.getCellRect(rowIndex, 0, true));
-				return;
-			}
-		}
-	}
+      facilityController.updateFacility(updatedFacility);
+      refreshFacilitiesTable();
+      selectFacilityById(updatedFacility.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private void selectFacilityById(String facilityId) {
+    if (facilityId == null || facilityId.trim().isEmpty()) {
+      return;
+    }
+
+    for (int rowIndex = 0; rowIndex < facilitiesTableModel.getRowCount(); rowIndex++) {
+      Facility facility = facilitiesTableModel.getFacilityAtRow(rowIndex);
+      if (facility != null && facilityId.equals(facility.getId())) {
+        facilitiesTable.setRowSelectionInterval(rowIndex, rowIndex);
+        facilitiesTable.scrollRectToVisible(facilitiesTable.getCellRect(rowIndex, 0, true));
+        return;
+      }
+    }
+  }
+
+  private void configureColumnWidths() {
+    setWidth(0, 90);
+    setWidth(1, 220);
+    setWidth(2, 140);
+    setWidth(3, 260);
+    setWidth(4, 110);
+    setWidth(5, 140);
+    setWidth(6, 220);
+    setWidth(7, 200);
+    setWidth(8, 180);
+    setWidth(9, 90);
+    setWidth(10, 320);
+  }
+
+  private void setWidth(int columnIndex, int width) {
+    TableColumn column = facilitiesTable.getColumnModel().getColumn(columnIndex);
+    column.setPreferredWidth(width);
+  }
+
+  private String safe(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 }

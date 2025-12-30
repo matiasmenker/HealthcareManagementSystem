@@ -87,6 +87,22 @@ public class StaffPanel extends JPanel {
     }
   }
 
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> namesById = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      namesById.put(id, safe(facility.getName()));
+    }
+    return namesById;
+  }
+
   private void openAddStaffDialog() {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
@@ -153,11 +169,11 @@ public class StaffPanel extends JPanel {
       );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-      defaultValuesByKey.put("staffId", selectedStaff.getId());
-      defaultValuesByKey.put("fullName", selectedStaff.getFullName());
-      defaultValuesByKey.put("email", selectedStaff.getEmail());
-      defaultValuesByKey.put("role", selectedStaff.getRole());
-      defaultValuesByKey.put("facilityId", selectedStaff.getFacilityId());
+      defaultValuesByKey.put("staffId", safe(selectedStaff.getId()));
+      defaultValuesByKey.put("fullName", safe(selectedStaff.getFullName()));
+      defaultValuesByKey.put("email", safe(selectedStaff.getEmail()));
+      defaultValuesByKey.put("role", safe(selectedStaff.getRole()));
+      defaultValuesByKey.put("facilityId", safe(selectedStaff.getFacilityId()));
 
       FormDialog formDialog = new FormDialog(owner, "Edit Staff", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
@@ -184,25 +200,9 @@ public class StaffPanel extends JPanel {
     }
   }
 
-  private Map<String, String> buildFacilityNamesByFacilityId() {
-    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
-    List<Facility> facilities = facilityController.getAllFacilities();
-    for (Facility facility : facilities) {
-      if (facility == null) {
-        continue;
-      }
-      String id = safe(facility.getId());
-      if (id.isEmpty()) {
-        continue;
-      }
-      facilityNamesByFacilityId.put(id, safe(facility.getName()));
-    }
-    return facilityNamesByFacilityId;
-  }
-
   private List<SelectionItem> buildFacilitySelectionItems() {
-    List<Facility> facilities = facilityController.getAllFacilities();
     List<SelectionItem> items = new java.util.ArrayList<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
     for (Facility facility : facilities) {
       if (facility == null) {
         continue;

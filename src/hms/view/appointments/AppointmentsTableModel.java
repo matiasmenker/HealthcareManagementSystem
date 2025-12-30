@@ -1,6 +1,7 @@
 package hms.view.appointments;
 
 import hms.model.Appointment;
+import hms.model.enums.AppointmentStatus;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
@@ -12,10 +13,10 @@ public class AppointmentsTableModel extends AbstractTableModel {
 
   private final String[] columnNames = new String[] {
       "Appointment ID",
-      "Date/Time",
       "Patient",
       "Clinician",
       "Facility",
+      "Date/Time",
       "Status",
       "Reason"
   };
@@ -69,19 +70,20 @@ public class AppointmentsTableModel extends AbstractTableModel {
       return safe(appointment.getId());
     }
     if (columnIndex == 1) {
-      return safe(appointment.getDateTime());
+      return resolveLabel(appointment.getPatientId(), patientNamesByPatientId, "Patient");
     }
     if (columnIndex == 2) {
-      return resolveNameOrFallbackId(safe(appointment.getPatientId()), patientNamesByPatientId, "Patient");
+      return resolveLabel(appointment.getClinicianId(), clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 3) {
-      return resolveNameOrFallbackId(safe(appointment.getClinicianId()), clinicianNamesByClinicianId, "Clinician");
+      return resolveLabel(appointment.getFacilityId(), facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 4) {
-      return resolveNameOrFallbackId(safe(appointment.getFacilityId()), facilityNamesByFacilityId, "Facility");
+      return safe(appointment.getDateTime());
     }
     if (columnIndex == 5) {
-      return appointment.getStatus() == null ? "" : appointment.getStatus().name();
+      AppointmentStatus status = appointment.getStatus();
+      return status == null ? "" : status.name();
     }
     if (columnIndex == 6) {
       return safe(appointment.getReason());
@@ -90,15 +92,16 @@ public class AppointmentsTableModel extends AbstractTableModel {
     return "";
   }
 
-  private String resolveNameOrFallbackId(String id, Map<String, String> namesById, String label) {
-    if (id.isEmpty()) {
+  private String resolveLabel(String id, Map<String, String> namesById, String fallbackPrefix) {
+    String safeId = safe(id);
+    if (safeId.isEmpty()) {
       return "";
     }
-    String name = safe(namesById.get(id));
+    String name = safe(namesById.get(safeId));
     if (!name.isEmpty()) {
       return name;
     }
-    return label + " " + id;
+    return fallbackPrefix + " " + safeId;
   }
 
   private String safe(String value) {

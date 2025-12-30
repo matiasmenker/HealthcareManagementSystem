@@ -8,63 +8,69 @@ import java.util.Objects;
 
 public class FacilityController {
 
-	private final FacilityRepository facilityRepository;
+  private final FacilityRepository facilityRepository;
 
-	public FacilityController(FacilityRepository facilityRepository) {
-		this.facilityRepository = Objects.requireNonNull(facilityRepository, "facilityRepository");
-	}
+  public FacilityController(FacilityRepository facilityRepository) {
+    this.facilityRepository = Objects.requireNonNull(facilityRepository, "facilityRepository");
+  }
 
-	public void loadFacilitiesFromCsv(String filePath) {
-		facilityRepository.load(filePath);
-	}
+  public List<Facility> getAllFacilities() {
+    return facilityRepository.findAll();
+  }
 
-	public List<Facility> getAllFacilities() {
-		return facilityRepository.findAll();
-	}
+  public Facility getFacilityById(String facilityId) {
+    return facilityRepository.findById(facilityId);
+  }
 
-	public Facility getFacilityById(String facilityId) {
-		if (facilityId == null || facilityId.trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility id is required");
-		}
+  public void addFacility(Facility facility) {
+    validateFacility(facility);
+    facilityRepository.add(facility);
+  }
 
-		Facility facility = facilityRepository.findById(facilityId);
-		if (facility == null) {
-			throw new IllegalArgumentException("Facility not found: " + facilityId);
-		}
+  public void updateFacility(Facility facility) {
+    validateFacility(facility);
+    facilityRepository.update(facility);
+  }
 
-		return facility;
-	}
+  private void validateFacility(Facility facility) {
+    Objects.requireNonNull(facility, "facility");
 
-	public void addFacility(Facility facility) {
-		validateFacility(facility);
-		facilityRepository.add(facility);
-	}
+    if (isBlank(facility.getId())) {
+      throw new IllegalArgumentException("Facility id is required");
+    }
+    if (isBlank(facility.getName())) {
+      throw new IllegalArgumentException("Facility name is required");
+    }
+    if (isBlank(facility.getType())) {
+      throw new IllegalArgumentException("Facility type is required");
+    }
+    if (isBlank(facility.getAddress())) {
+      throw new IllegalArgumentException("Facility address is required");
+    }
+    if (isBlank(facility.getPostcode())) {
+      throw new IllegalArgumentException("Facility postcode is required");
+    }
+    if (isBlank(facility.getPhoneNumber())) {
+      throw new IllegalArgumentException("Facility phone number is required");
+    }
+    if (isBlank(facility.getEmail())) {
+      throw new IllegalArgumentException("Facility email is required");
+    }
+    if (isBlank(facility.getOpeningHours())) {
+      throw new IllegalArgumentException("Facility opening hours are required");
+    }
+    if (isBlank(facility.getManagerName())) {
+      throw new IllegalArgumentException("Facility manager name is required");
+    }
+    if (isBlank(facility.getCapacity())) {
+      throw new IllegalArgumentException("Facility capacity is required");
+    }
+    if (isBlank(facility.getSpecialitiesOffered())) {
+      throw new IllegalArgumentException("Facility specialities offered are required");
+    }
+  }
 
-	public void updateFacility(Facility facility) {
-		validateFacility(facility);
-		facilityRepository.update(facility);
-	}
-
-	private void validateFacility(Facility facility) {
-		Objects.requireNonNull(facility, "facility");
-
-		if (facility.getId() == null || facility.getId().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility id is required");
-		}
-		if (facility.getName() == null || facility.getName().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility name is required");
-		}
-		if (facility.getType() == null || facility.getType().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility type is required");
-		}
-		if (facility.getAddress() == null || facility.getAddress().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility address is required");
-		}
-		if (facility.getPhoneNumber() == null || facility.getPhoneNumber().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility phone number is required");
-		}
-		if (facility.getCapacity() == null || facility.getCapacity().trim().isEmpty()) {
-			throw new IllegalArgumentException("Facility capacity is required");
-		}
-	}
+  private boolean isBlank(String value) {
+    return value == null || value.trim().isEmpty();
+  }
 }
