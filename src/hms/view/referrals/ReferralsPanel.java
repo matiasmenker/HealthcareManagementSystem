@@ -12,6 +12,7 @@ import hms.model.enums.ReferralStatus;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
+import hms.view.common.SelectionItem;
 
 import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
@@ -100,72 +101,29 @@ public class ReferralsPanel extends JPanel {
     }
   }
 
-  private Map<String, String> buildPatientNamesByPatientId() {
-    Map<String, String> patientNamesByPatientId = new LinkedHashMap<>();
-    List<Patient> patients = patientController.getAllPatients();
-    for (Patient patient : patients) {
-      if (patient == null) {
-        continue;
-      }
-      String patientId = safe(patient.getId());
-      if (patientId.isEmpty()) {
-        continue;
-      }
-      patientNamesByPatientId.put(patientId, safe(patient.getFullName()));
-    }
-    return patientNamesByPatientId;
-  }
-
-  private Map<String, String> buildClinicianNamesByClinicianId() {
-    Map<String, String> clinicianNamesByClinicianId = new LinkedHashMap<>();
-    List<Clinician> clinicians = clinicianController.getAllClinicians();
-    for (Clinician clinician : clinicians) {
-      if (clinician == null) {
-        continue;
-      }
-      String clinicianId = safe(clinician.getId());
-      if (clinicianId.isEmpty()) {
-        continue;
-      }
-      clinicianNamesByClinicianId.put(clinicianId, safe(clinician.getFullName()));
-    }
-    return clinicianNamesByClinicianId;
-  }
-
-  private Map<String, String> buildFacilityNamesByFacilityId() {
-    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
-    List<Facility> facilities = facilityController.getAllFacilities();
-    for (Facility facility : facilities) {
-      if (facility == null) {
-        continue;
-      }
-      String facilityId = safe(facility.getId());
-      if (facilityId.isEmpty()) {
-        continue;
-      }
-      facilityNamesByFacilityId.put(facilityId, safe(facility.getName()));
-    }
-    return facilityNamesByFacilityId;
-  }
-
   private void openAddReferralDialog() {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
+      List<SelectionItem> patientOptions = buildPatientSelectionItems();
+      List<SelectionItem> clinicianOptions = buildClinicianSelectionItems();
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+      List<SelectionItem> statusOptions = buildReferralStatusSelectionItems();
+
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredEditable("referralId", "Referral ID"),
-          FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
-          FormFieldViewConfiguration.requiredEditable("referringClinicianId", "Referring Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("referredToClinicianId", "Referred To Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("referringFacilityId", "Referring Facility ID"),
-          FormFieldViewConfiguration.requiredEditable("referredToFacilityId", "Referred To Facility ID"),
+          FormFieldViewConfiguration.requiredSelect("patientId", "Patient", patientOptions),
+          FormFieldViewConfiguration.requiredSelect("referringClinicianId", "Referring Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referredToClinicianId", "Referred To Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referringFacilityId", "Referring Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredSelect("referredToFacilityId", "Referred To Facility", facilityOptions),
           FormFieldViewConfiguration.requiredEditable("referralDate", "Referral Date (YYYY-MM-DD)"),
           FormFieldViewConfiguration.requiredEditable("urgencyLevel", "Urgency Level"),
           FormFieldViewConfiguration.requiredEditable("referralReason", "Referral Reason"),
           FormFieldViewConfiguration.requiredEditable("clinicalSummary", "Clinical Summary"),
-          FormFieldViewConfiguration.optionalEditable("requestedInvestigations", "Requested Investigations (pipe separated)"),
-          FormFieldViewConfiguration.requiredEditable("status", "Status (CREATED, SENT, ACCEPTED, REJECTED, COMPLETED)"),
-          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID (optional)"),
+          FormFieldViewConfiguration.optionalEditable("requestedInvestigations", "Requested Investigations"),
+          FormFieldViewConfiguration.requiredSelect("status", "Status", statusOptions),
+          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID"),
           FormFieldViewConfiguration.optionalEditable("notes", "Notes"),
           FormFieldViewConfiguration.optionalEditable("createdDate", "Created Date (YYYY-MM-DD)"),
           FormFieldViewConfiguration.optionalEditable("lastUpdated", "Last Updated (YYYY-MM-DD)")
@@ -223,20 +181,25 @@ public class ReferralsPanel extends JPanel {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
+      List<SelectionItem> patientOptions = buildPatientSelectionItems();
+      List<SelectionItem> clinicianOptions = buildClinicianSelectionItems();
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+      List<SelectionItem> statusOptions = buildReferralStatusSelectionItems();
+
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredReadOnly("referralId", "Referral ID"),
-          FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
-          FormFieldViewConfiguration.requiredEditable("referringClinicianId", "Referring Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("referredToClinicianId", "Referred To Clinician ID"),
-          FormFieldViewConfiguration.requiredEditable("referringFacilityId", "Referring Facility ID"),
-          FormFieldViewConfiguration.requiredEditable("referredToFacilityId", "Referred To Facility ID"),
+          FormFieldViewConfiguration.requiredSelect("patientId", "Patient", patientOptions),
+          FormFieldViewConfiguration.requiredSelect("referringClinicianId", "Referring Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referredToClinicianId", "Referred To Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referringFacilityId", "Referring Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredSelect("referredToFacilityId", "Referred To Facility", facilityOptions),
           FormFieldViewConfiguration.requiredEditable("referralDate", "Referral Date (YYYY-MM-DD)"),
           FormFieldViewConfiguration.requiredEditable("urgencyLevel", "Urgency Level"),
           FormFieldViewConfiguration.requiredEditable("referralReason", "Referral Reason"),
           FormFieldViewConfiguration.requiredEditable("clinicalSummary", "Clinical Summary"),
-          FormFieldViewConfiguration.optionalEditable("requestedInvestigations", "Requested Investigations (pipe separated)"),
-          FormFieldViewConfiguration.requiredEditable("status", "Status (CREATED, SENT, ACCEPTED, REJECTED, COMPLETED)"),
-          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID (optional)"),
+          FormFieldViewConfiguration.optionalEditable("requestedInvestigations", "Requested Investigations"),
+          FormFieldViewConfiguration.requiredSelect("status", "Status", statusOptions),
+          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID"),
           FormFieldViewConfiguration.optionalEditable("notes", "Notes"),
           FormFieldViewConfiguration.optionalEditable("createdDate", "Created Date (YYYY-MM-DD)"),
           FormFieldViewConfiguration.optionalEditable("lastUpdated", "Last Updated (YYYY-MM-DD)")
@@ -311,6 +274,116 @@ public class ReferralsPanel extends JPanel {
     } catch (IllegalArgumentException exception) {
       return ReferralStatus.CREATED;
     }
+  }
+
+  private List<SelectionItem> buildPatientSelectionItems() {
+    List<Patient> patients = patientController.getAllPatients();
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (Patient patient : patients) {
+      if (patient == null) {
+        continue;
+      }
+      String id = safe(patient.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      String name = safe(patient.getFullName());
+      String label = name.isEmpty() ? ("Patient ID: " + id) : (name + " (ID: " + id + ")");
+      items.add(new SelectionItem(id, label));
+    }
+    return items;
+  }
+
+  private List<SelectionItem> buildClinicianSelectionItems() {
+    List<Clinician> clinicians = clinicianController.getAllClinicians();
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (Clinician clinician : clinicians) {
+      if (clinician == null) {
+        continue;
+      }
+      String id = safe(clinician.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      String name = safe(clinician.getFullName());
+      String label = name.isEmpty() ? ("Clinician ID: " + id) : (name + " (ID: " + id + ")");
+      items.add(new SelectionItem(id, label));
+    }
+    return items;
+  }
+
+  private List<SelectionItem> buildFacilitySelectionItems() {
+    List<Facility> facilities = facilityController.getAllFacilities();
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      String name = safe(facility.getName());
+      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
+      items.add(new SelectionItem(id, label));
+    }
+    return items;
+  }
+
+  private List<SelectionItem> buildReferralStatusSelectionItems() {
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (ReferralStatus status : ReferralStatus.values()) {
+      items.add(new SelectionItem(status.name(), status.name()));
+    }
+    return items;
+  }
+
+  private Map<String, String> buildPatientNamesByPatientId() {
+    Map<String, String> patientNamesByPatientId = new LinkedHashMap<>();
+    List<Patient> patients = patientController.getAllPatients();
+    for (Patient patient : patients) {
+      if (patient == null) {
+        continue;
+      }
+      String id = safe(patient.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      patientNamesByPatientId.put(id, safe(patient.getFullName()));
+    }
+    return patientNamesByPatientId;
+  }
+
+  private Map<String, String> buildClinicianNamesByClinicianId() {
+    Map<String, String> clinicianNamesByClinicianId = new LinkedHashMap<>();
+    List<Clinician> clinicians = clinicianController.getAllClinicians();
+    for (Clinician clinician : clinicians) {
+      if (clinician == null) {
+        continue;
+      }
+      String id = safe(clinician.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      clinicianNamesByClinicianId.put(id, safe(clinician.getFullName()));
+    }
+    return clinicianNamesByClinicianId;
+  }
+
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String id = safe(facility.getId());
+      if (id.isEmpty()) {
+        continue;
+      }
+      facilityNamesByFacilityId.put(id, safe(facility.getName()));
+    }
+    return facilityNamesByFacilityId;
   }
 
   private void selectReferralById(String referralId) {

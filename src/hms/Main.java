@@ -28,104 +28,142 @@ import java.util.List;
 import java.util.Map;
 
 public class Main {
-	public static void main(String[] args) {
-		SwingUtilities.invokeLater(() -> {
-			MainFrame mainFrame = null;
+  public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> {
+      MainFrame mainFrame = null;
 
-			try {
-				Path projectDirectory = Path.of(System.getProperty("user.dir"));
-				Path dataDirectory = projectDirectory.resolve("data");
-				Path outputDirectory = projectDirectory.resolve("output");
+      try {
+        Path projectDirectory = Path.of(System.getProperty("user.dir"));
+        Path dataDirectory = projectDirectory.resolve("data");
+        Path outputDirectory = projectDirectory.resolve("output");
 
-				PatientRepository patientRepository = new PatientRepository();
-				patientRepository.load(dataDirectory.resolve("patients.csv").toString());
+        PatientRepository patientRepository = new PatientRepository();
+        patientRepository.load(dataDirectory.resolve("patients.csv").toString());
 
-				ClinicianRepository clinicianRepository = new ClinicianRepository();
-				clinicianRepository.load(dataDirectory.resolve("clinicians.csv").toString());
+        ClinicianRepository clinicianRepository = new ClinicianRepository();
+        clinicianRepository.load(dataDirectory.resolve("clinicians.csv").toString());
 
-				AppointmentRepository appointmentRepository = new AppointmentRepository();
-				appointmentRepository.load(dataDirectory.resolve("appointments.csv").toString());
+        AppointmentRepository appointmentRepository = new AppointmentRepository();
+        appointmentRepository.load(dataDirectory.resolve("appointments.csv").toString());
 
-				FacilityRepository facilityRepository = new FacilityRepository();
-				facilityRepository.load(dataDirectory.resolve("facilities.csv").toString());
+        FacilityRepository facilityRepository = new FacilityRepository();
+        facilityRepository.load(dataDirectory.resolve("facilities.csv").toString());
 
-				StaffRepository staffRepository = new StaffRepository();
-				staffRepository.load(dataDirectory.resolve("staff.csv").toString());
+        StaffRepository staffRepository = new StaffRepository();
+        staffRepository.load(dataDirectory.resolve("staff.csv").toString());
 
-				PrescriptionRepository prescriptionRepository = new PrescriptionRepository();
-				prescriptionRepository.load(dataDirectory.resolve("prescriptions.csv").toString());
+        PrescriptionRepository prescriptionRepository = new PrescriptionRepository();
+        prescriptionRepository.load(dataDirectory.resolve("prescriptions.csv").toString());
 
-				ReferralRepository referralRepository = new ReferralRepository();
-				referralRepository.load(dataDirectory.resolve("referrals.csv").toString());
+        ReferralRepository referralRepository = new ReferralRepository();
+        referralRepository.load(dataDirectory.resolve("referrals.csv").toString());
 
-				PatientController patientController = new PatientController(patientRepository);
-				ClinicianController clinicianController = new ClinicianController(clinicianRepository);
-				AppointmentController appointmentController = new AppointmentController(appointmentRepository,
-						patientRepository);
-				FacilityController facilityController = new FacilityController(facilityRepository);
-				StaffController staffController = new StaffController(staffRepository);
+        PatientController patientController = new PatientController(patientRepository);
+        ClinicianController clinicianController = new ClinicianController(clinicianRepository);
+        FacilityController facilityController = new FacilityController(facilityRepository);
 
-				PrescriptionOutputFileGenerator prescriptionOutputFileGenerator = new PrescriptionOutputFileGenerator(
-						outputDirectory);
-				PrescriptionController prescriptionController = new PrescriptionController(prescriptionRepository,
-						patientRepository, clinicianRepository, prescriptionOutputFileGenerator);
+        AppointmentController appointmentController = new AppointmentController(
+            appointmentRepository,
+            patientRepository,
+            clinicianRepository,
+            facilityRepository
+        );
 
-				ReferralProcessingOutputWriter referralProcessingOutputWriter = new ReferralProcessingOutputWriter(
-						outputDirectory);
-				ReferralManager.getInstance(referralRepository, patientRepository, clinicianRepository,
-						facilityRepository, referralProcessingOutputWriter);
+        StaffController staffController = new StaffController(staffRepository);
 
-				ReferralController referralController = new ReferralController(referralRepository, patientRepository,
-						clinicianRepository, facilityRepository);
+        PrescriptionOutputFileGenerator prescriptionOutputFileGenerator = new PrescriptionOutputFileGenerator(outputDirectory);
+        PrescriptionController prescriptionController = new PrescriptionController(
+            prescriptionRepository,
+            patientRepository,
+            clinicianRepository,
+            prescriptionOutputFileGenerator
+        );
 
-				mainFrame = new MainFrame(patientController, clinicianController, appointmentController,
-						facilityController, staffController, prescriptionController, referralController);
-				mainFrame.setVisible(true);
+        ReferralProcessingOutputWriter referralProcessingOutputWriter = new ReferralProcessingOutputWriter(outputDirectory);
+        ReferralManager.getInstance(
+            referralRepository,
+            patientRepository,
+            clinicianRepository,
+            facilityRepository,
+            referralProcessingOutputWriter
+        );
 
-				Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(dataDirectory,
-						patientRepository.findAll().size(), clinicianRepository.findAll().size(),
-						appointmentRepository.findAll().size(), facilityRepository.findAll().size(),
-						staffRepository.findAll().size(), prescriptionRepository.findAll().size(),
-						referralRepository.findAll().size());
+        ReferralController referralController = new ReferralController(
+            referralRepository,
+            patientRepository,
+            clinicianRepository,
+            facilityRepository
+        );
 
-				mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
-			} catch (RuntimeException exception) {
-				if (mainFrame != null) {
-					mainFrame.setStatusText("Failed loading CSV files");
-				}
+        mainFrame = new MainFrame(
+            patientController,
+            clinicianController,
+            appointmentController,
+            facilityController,
+            staffController,
+            prescriptionController,
+            referralController
+        );
+        mainFrame.setVisible(true);
 
-				JOptionPane.showMessageDialog(mainFrame, exception.getMessage(), "Startup error",
-						JOptionPane.ERROR_MESSAGE);
-			}
-		});
-	}
+        Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(
+            dataDirectory,
+            patientRepository.findAll().size(),
+            clinicianRepository.findAll().size(),
+            appointmentRepository.findAll().size(),
+            facilityRepository.findAll().size(),
+            staffRepository.findAll().size(),
+            prescriptionRepository.findAll().size(),
+            referralRepository.findAll().size()
+        );
 
-	private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount,
-			int cliniciansCount, int appointmentsCount, int facilitiesCount, int staffCount, int prescriptionsCount,
-			int referralsCount) {
-		Map<String, Integer> countsByLabel = new LinkedHashMap<>();
-		countsByLabel.put("patients", patientsCount);
-		countsByLabel.put("clinicians", cliniciansCount);
-		countsByLabel.put("appointments", appointmentsCount);
-		countsByLabel.put("facilities", facilitiesCount);
-		countsByLabel.put("staff", staffCount);
-		countsByLabel.put("prescriptions", prescriptionsCount);
-		countsByLabel.put("referrals", referralsCount);
+        mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
+      } catch (RuntimeException exception) {
+        if (mainFrame != null) {
+          mainFrame.setStatusText("Failed loading CSV files");
+        }
 
-		List<Map<String, String>> rows = CsvFileReader
-				.readRowsAsMaps(dataDirectory.resolve("referrals.csv").toString());
-		countsByLabel.put("referrals", rows.size());
+        JOptionPane.showMessageDialog(
+            mainFrame,
+            exception.getMessage(),
+            "Startup error",
+            JOptionPane.ERROR_MESSAGE
+        );
+      }
+    });
+  }
 
-		return countsByLabel;
-	}
+  private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory,
+                                                             int patientsCount,
+                                                             int cliniciansCount,
+                                                             int appointmentsCount,
+                                                             int facilitiesCount,
+                                                             int staffCount,
+                                                             int prescriptionsCount,
+                                                             int referralsCount) {
+    Map<String, Integer> countsByLabel = new LinkedHashMap<>();
+    countsByLabel.put("patients", patientsCount);
+    countsByLabel.put("clinicians", cliniciansCount);
+    countsByLabel.put("appointments", appointmentsCount);
+    countsByLabel.put("facilities", facilitiesCount);
+    countsByLabel.put("staff", staffCount);
+    countsByLabel.put("prescriptions", prescriptionsCount);
+    countsByLabel.put("referrals", referralsCount);
 
-	private static String buildStatusText(Map<String, Integer> countsByLabel) {
-		return "Loaded " + countsByLabel.getOrDefault("patients", 0) + " patients, "
-				+ countsByLabel.getOrDefault("clinicians", 0) + " clinicians, "
-				+ countsByLabel.getOrDefault("facilities", 0) + " facilities, "
-				+ countsByLabel.getOrDefault("appointments", 0) + " appointments, "
-				+ countsByLabel.getOrDefault("prescriptions", 0) + " prescriptions, "
-				+ countsByLabel.getOrDefault("referrals", 0) + " referrals, " + countsByLabel.getOrDefault("staff", 0)
-				+ " staff";
-	}
+    List<Map<String, String>> referralRows = CsvFileReader.readRowsAsMaps(dataDirectory.resolve("referrals.csv").toString());
+    countsByLabel.put("referrals", referralRows.size());
+
+    return countsByLabel;
+  }
+
+  private static String buildStatusText(Map<String, Integer> countsByLabel) {
+    return "Loaded "
+        + countsByLabel.getOrDefault("patients", 0) + " patients, "
+        + countsByLabel.getOrDefault("clinicians", 0) + " clinicians, "
+        + countsByLabel.getOrDefault("facilities", 0) + " facilities, "
+        + countsByLabel.getOrDefault("appointments", 0) + " appointments, "
+        + countsByLabel.getOrDefault("prescriptions", 0) + " prescriptions, "
+        + countsByLabel.getOrDefault("referrals", 0) + " referrals, "
+        + countsByLabel.getOrDefault("staff", 0) + " staff";
+  }
 }

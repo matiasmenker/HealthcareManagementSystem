@@ -1,124 +1,203 @@
 package hms.view.common;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class FormDialog extends JDialog {
-	private final Map<String, JTextField> textFieldsByKey = new LinkedHashMap<>();
-	private boolean confirmed;
 
-	public FormDialog(Window owner, String title, List<FormFieldViewConfiguration> fieldViewConfigurations,
-			Map<String, String> defaultValuesByKey) {
-		super(owner, title, ModalityType.APPLICATION_MODAL);
-		Objects.requireNonNull(fieldViewConfigurations, "fieldViewConfigurations");
+  private final List<FormFieldViewConfiguration> fieldViewConfigurations;
+  private final Map<String, JTextField> textFieldsByKey = new LinkedHashMap<>();
+  private final Map<String, JComboBox<SelectionItem>> selectionBoxesByKey = new LinkedHashMap<>();
+  private boolean confirmed;
 
-		confirmed = false;
+  public FormDialog(Window owner,
+                    String title,
+                    List<FormFieldViewConfiguration> fieldViewConfigurations,
+                    Map<String, String> defaultValuesByKey) {
+    super(owner, title, ModalityType.APPLICATION_MODAL);
 
-		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		setLayout(new BorderLayout(10, 10));
+    this.fieldViewConfigurations = fieldViewConfigurations == null ? new ArrayList<>() : new ArrayList<>(fieldViewConfigurations);
+    this.confirmed = false;
 
-		JPanel formPanel = new JPanel(new GridBagLayout());
-		GridBagConstraints constraints = new GridBagConstraints();
-		constraints.insets = new Insets(4, 4, 4, 4);
-		constraints.anchor = GridBagConstraints.WEST;
-		constraints.fill = GridBagConstraints.HORIZONTAL;
+    setLayout(new BorderLayout(10, 10));
+    JPanel formPanel = new JPanel(new GridBagLayout());
+    formPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-		int rowIndex = 0;
-		for (FormFieldViewConfiguration fieldViewConfiguration : fieldViewConfigurations) {
-			constraints.gridy = rowIndex;
+    GridBagConstraints constraints = new GridBagConstraints();
+    constraints.gridx = 0;
+    constraints.gridy = 0;
+    constraints.anchor = GridBagConstraints.WEST;
+    constraints.insets = new Insets(6, 6, 6, 6);
 
-			constraints.gridx = 0;
-			constraints.weightx = 0.0;
-			JLabel label = new JLabel(
-					fieldViewConfiguration.getLabel() + (fieldViewConfiguration.isRequired() ? " *" : ""));
-			formPanel.add(label, constraints);
+    for (FormFieldViewConfiguration configuration : this.fieldViewConfigurations) {
+      JLabel label = new JLabel(configuration.getLabel());
+      constraints.gridx = 0;
+      constraints.weightx = 0;
+      constraints.fill = GridBagConstraints.NONE;
+      formPanel.add(label, constraints);
 
-			constraints.gridx = 1;
-			constraints.weightx = 1.0;
-			JTextField textField = new JTextField(28);
+      constraints.gridx = 1;
+      constraints.weightx = 1;
+      constraints.fill = GridBagConstraints.HORIZONTAL;
 
-			String defaultValue = "";
-			if (defaultValuesByKey != null) {
-				defaultValue = defaultValuesByKey.getOrDefault(fieldViewConfiguration.getKey(), "");
-			}
+      String defaultValue = defaultValuesByKey == null ? "" : defaultValuesByKey.getOrDefault(configuration.getKey(), "");
+      if (configuration.getInputType() == FormFieldInputType.TEXT) {
+        JTextField textField = new JTextField();
+        textField.setPreferredSize(new Dimension(320, 26));
+        textField.setEditable(configuration.isEditable());
+        textField.setText(defaultValue == null ? "" : defaultValue);
+        formPanel.add(textField, constraints);
+        textFieldsByKey.put(configuration.getKey(), textField);
+      } else {
+        List<SelectionItem> items = buildSelectionItems(configuration);
+        JComboBox<SelectionItem> selectionBox = new JComboBox<>(items.toArray(new SelectionItem[0]));
+        selectionBox.setEnabled(configuration.isEditable());
+        selectionBox.setPreferredSize(new Dimension(320, 26));
+        selectDefaultSelectionItem(selectionBox, defaultValue);
+        formPanel.add(selectionBox, constraints);
+        selectionBoxesByKey.put(configuration.getKey(), selectionBox);
+      }
 
-			textField.setText(defaultValue == null ? "" : defaultValue);
-			textField.setEditable(fieldViewConfiguration.isEditable());
+      constraints.gridy++;
+    }
 
-			formPanel.add(textField, constraints);
-			textFieldsByKey.put(fieldViewConfiguration.getKey(), textField);
+    JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton cancelButton = new JButton("Cancel");
+    JButton okButton = new JButton("OK");
 
-			rowIndex++;
-		}
+    cancelButton.addActionListener(event -> {
+      confirmed = false;
+      setVisible(false);
+      dispose();
+    });
 
-		add(new JScrollPane(formPanel), BorderLayout.CENTER);
+    okButton.addActionListener(event -> {
+      try {
+        validateRequiredFields();
+        confirmed = true;
+        setVisible(false);
+        dispose();
+      } catch (RuntimeException exception) {
+        JOptionPane.showMessageDialog(this, exception.getMessage(), "Validation error", JOptionPane.ERROR_MESSAGE);
+      }
+    });
 
-		JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-		JButton cancelButton = new JButton("Cancel");
-		JButton okButton = new JButton("OK");
+    buttonsPanel.add(cancelButton);
+    buttonsPanel.add(okButton);
 
-		cancelButton.addActionListener(e -> dispose());
-		okButton.addActionListener(e -> {
-			String validationError = validateRequiredFields(fieldViewConfigurations);
-			if (validationError != null) {
-				JOptionPane.showMessageDialog(this, validationError, "Validation", JOptionPane.WARNING_MESSAGE);
-				return;
-			}
-			confirmed = true;
-			dispose();
-		});
+    add(formPanel, BorderLayout.CENTER);
+    add(buttonsPanel, BorderLayout.SOUTH);
 
-		buttonsPanel.add(cancelButton);
-		buttonsPanel.add(okButton);
+    pack();
+    setLocationRelativeTo(owner);
+  }
 
-		add(buttonsPanel, BorderLayout.SOUTH);
+  public boolean isConfirmed() {
+    return confirmed;
+  }
 
-		pack();
-		setLocationRelativeTo(owner);
-	}
+  public Map<String, String> getValuesByKey() {
+    Map<String, String> valuesByKey = new LinkedHashMap<>();
 
-	public boolean isConfirmed() {
-		return confirmed;
-	}
+    for (FormFieldViewConfiguration configuration : fieldViewConfigurations) {
+      String key = configuration.getKey();
 
-	public Map<String, String> getValuesByKey() {
-		Map<String, String> valuesByKey = new LinkedHashMap<>();
-		for (Map.Entry<String, JTextField> entry : textFieldsByKey.entrySet()) {
-			String value = entry.getValue().getText();
-			valuesByKey.put(entry.getKey(), value == null ? "" : value.trim());
-		}
-		return valuesByKey;
-	}
+      if (configuration.getInputType() == FormFieldInputType.TEXT) {
+        JTextField textField = textFieldsByKey.get(key);
+        String value = textField == null ? "" : textField.getText();
+        valuesByKey.put(key, value == null ? "" : value.trim());
+      } else {
+        JComboBox<SelectionItem> selectionBox = selectionBoxesByKey.get(key);
+        SelectionItem selectedItem = selectionBox == null ? null : (SelectionItem) selectionBox.getSelectedItem();
+        String value = selectedItem == null ? "" : selectedItem.getValue();
+        valuesByKey.put(key, value == null ? "" : value.trim());
+      }
+    }
 
-	private String validateRequiredFields(List<FormFieldViewConfiguration> fieldViewConfigurations) {
-		for (FormFieldViewConfiguration fieldViewConfiguration : fieldViewConfigurations) {
-			if (!fieldViewConfiguration.isRequired()) {
-				continue;
-			}
-			JTextField textField = textFieldsByKey.get(fieldViewConfiguration.getKey());
-			if (textField == null) {
-				continue;
-			}
-			String value = textField.getText();
-			if (value == null || value.trim().isEmpty()) {
-				return "Field '" + fieldViewConfiguration.getLabel() + "' is required.";
-			}
-		}
-		return null;
-	}
+    return valuesByKey;
+  }
+
+  private List<SelectionItem> buildSelectionItems(FormFieldViewConfiguration configuration) {
+    Objects.requireNonNull(configuration, "configuration");
+
+    List<SelectionItem> items = configuration.getSelectionItems();
+
+    if (!configuration.isRequired()) {
+      boolean hasEmpty = false;
+      for (SelectionItem item : items) {
+        if (item != null && (item.getValue() == null || item.getValue().trim().isEmpty())) {
+          hasEmpty = true;
+          break;
+        }
+      }
+      if (!hasEmpty) {
+        List<SelectionItem> withEmpty = new ArrayList<>();
+        withEmpty.add(new SelectionItem("", ""));
+        withEmpty.addAll(items);
+        return withEmpty;
+      }
+    }
+
+    return items;
+  }
+
+  private void selectDefaultSelectionItem(JComboBox<SelectionItem> selectionBox, String defaultValue) {
+    if (selectionBox == null) {
+      return;
+    }
+    String desired = defaultValue == null ? "" : defaultValue.trim();
+    for (int index = 0; index < selectionBox.getItemCount(); index++) {
+      SelectionItem item = selectionBox.getItemAt(index);
+      if (item == null) {
+        continue;
+      }
+      if (Objects.equals(item.getValue(), desired)) {
+        selectionBox.setSelectedIndex(index);
+        return;
+      }
+    }
+  }
+
+  private void validateRequiredFields() {
+    for (FormFieldViewConfiguration configuration : fieldViewConfigurations) {
+      if (!configuration.isRequired()) {
+        continue;
+      }
+
+      String key = configuration.getKey();
+
+      if (configuration.getInputType() == FormFieldInputType.TEXT) {
+        JTextField textField = textFieldsByKey.get(key);
+        String value = textField == null ? "" : textField.getText();
+        if (value == null || value.trim().isEmpty()) {
+          throw new IllegalArgumentException(configuration.getLabel() + " is required");
+        }
+      } else {
+        JComboBox<SelectionItem> selectionBox = selectionBoxesByKey.get(key);
+        SelectionItem selectedItem = selectionBox == null ? null : (SelectionItem) selectionBox.getSelectedItem();
+        String value = selectedItem == null ? "" : selectedItem.getValue();
+        if (value == null || value.trim().isEmpty()) {
+          throw new IllegalArgumentException(configuration.getLabel() + " is required");
+        }
+      }
+    }
+  }
 }
