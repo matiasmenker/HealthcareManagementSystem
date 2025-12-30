@@ -9,8 +9,7 @@ import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.Referral;
 import hms.model.enums.ReferralStatus;
-import hms.model.singleton.ReferralProcessingResult;
-import hms.view.MainFrame;
+import hms.model.singleton.ReferralManager;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -25,6 +24,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Window;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +74,9 @@ public class ReferralsPanel extends JPanel {
       }
     });
 
+    buttonsActionsBar.setDeleteHandler(this::deleteSelectedReferral);
     buttonsActionsBar.setEditEnabled(false);
+    buttonsActionsBar.setDeleteEnabled(false);
 
     referralsTable.getSelectionModel().addListSelectionListener(event -> {
       if (event.getValueIsAdjusting()) {
@@ -82,6 +84,7 @@ public class ReferralsPanel extends JPanel {
       }
       boolean hasSelection = referralsTable.getSelectedRow() >= 0;
       buttonsActionsBar.setEditEnabled(hasSelection);
+      buttonsActionsBar.setDeleteEnabled(hasSelection);
     });
 
     add(buttonsActionsBar, BorderLayout.NORTH);
@@ -97,7 +100,10 @@ public class ReferralsPanel extends JPanel {
       Map<String, String> clinicianNamesByClinicianId = buildClinicianNamesByClinicianId();
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       referralsTableModel.setReferrals(referrals, patientNamesByPatientId, clinicianNamesByClinicianId, facilityNamesByFacilityId);
-      buttonsActionsBar.setEditEnabled(referralsTable.getSelectedRow() >= 0);
+
+      boolean hasSelection = referralsTable.getSelectedRow() >= 0;
+      buttonsActionsBar.setEditEnabled(hasSelection);
+      buttonsActionsBar.setDeleteEnabled(hasSelection);
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -110,23 +116,32 @@ public class ReferralsPanel extends JPanel {
       List<SelectionItem> patientOptions = buildPatientSelectionItems();
       List<SelectionItem> clinicianOptions = buildClinicianSelectionItems();
       List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
-      List<SelectionItem> urgencyOptions = buildUrgencySelectionItems();
-      List<SelectionItem> statusOptions = buildStatusSelectionItems();
+      List<SelectionItem> statusOptions = buildReferralStatusSelectionItems();
+
+      String today = LocalDate.now().toString();
 
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredEditable("referralId", "Referral ID"),
           FormFieldViewConfiguration.requiredSelect("patientId", "Patient", patientOptions),
-          FormFieldViewConfiguration.requiredSelect("fromClinicianId", "From Clinician", clinicianOptions),
-          FormFieldViewConfiguration.requiredSelect("toClinicianId", "To Clinician", clinicianOptions),
-          FormFieldViewConfiguration.requiredSelect("fromFacilityId", "From Facility", facilityOptions),
-          FormFieldViewConfiguration.requiredSelect("toFacilityId", "To Facility", facilityOptions),
-          FormFieldViewConfiguration.requiredSelect("urgency", "Urgency", urgencyOptions),
+          FormFieldViewConfiguration.requiredSelect("referringClinicianId", "Referring Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referredClinicianId", "Referred Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referringFacilityId", "Referring Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredSelect("referredFacilityId", "Referred Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredEditable("referralDate", "Referral Date (YYYY-MM-DD)"),
+          FormFieldViewConfiguration.requiredEditable("urgencyLevel", "Urgency Level"),
+          FormFieldViewConfiguration.requiredEditable("referralReason", "Referral Reason"),
           FormFieldViewConfiguration.requiredEditable("clinicalSummary", "Clinical Summary"),
+          FormFieldViewConfiguration.requiredEditable("requestedInvestigations", "Requested Investigations"),
           FormFieldViewConfiguration.requiredSelect("status", "Status", statusOptions),
-          FormFieldViewConfiguration.requiredEditable("dateCreated", "Date Created (YYYY-MM-DD)")
+          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID"),
+          FormFieldViewConfiguration.optionalEditable("notes", "Notes")
       );
 
-      FormDialog formDialog = new FormDialog(owner, "Create Referral", fieldViewConfigurations, Map.of());
+      Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
+      defaultValuesByKey.put("referralDate", today);
+      defaultValuesByKey.put("status", ReferralStatus.CREATED.name());
+
+      FormDialog formDialog = new FormDialog(owner, "Add Referral", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
 
       if (!formDialog.isConfirmed()) {
@@ -135,39 +150,41 @@ public class ReferralsPanel extends JPanel {
 
       Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
+      String referralDate = safe(valuesByKey.getOrDefault("referralDate", ""));
+      String createdDate = referralDate;
+      String lastUpdated = referralDate;
+
       Referral referral = new Referral(
           valuesByKey.getOrDefault("referralId", ""),
           valuesByKey.getOrDefault("patientId", ""),
-          valuesByKey.getOrDefault("fromClinicianId", ""),
-          valuesByKey.getOrDefault("toClinicianId", ""),
-          valuesByKey.getOrDefault("fromFacilityId", ""),
-          valuesByKey.getOrDefault("toFacilityId", ""),
-          valuesByKey.getOrDefault("urgency", ""),
+          valuesByKey.getOrDefault("referringClinicianId", ""),
+          valuesByKey.getOrDefault("referredClinicianId", ""),
+          valuesByKey.getOrDefault("referringFacilityId", ""),
+          valuesByKey.getOrDefault("referredFacilityId", ""),
+          referralDate,
+          valuesByKey.getOrDefault("urgencyLevel", ""),
+          valuesByKey.getOrDefault("referralReason", ""),
           valuesByKey.getOrDefault("clinicalSummary", ""),
-          valuesByKey.getOrDefault("status", ""),
-          valuesByKey.getOrDefault("dateCreated", "")
+          valuesByKey.getOrDefault("requestedInvestigations", ""),
+          parseReferralStatus(valuesByKey.getOrDefault("status", "")),
+          valuesByKey.getOrDefault("appointmentId", ""),
+          valuesByKey.getOrDefault("notes", ""),
+          createdDate,
+          lastUpdated
       );
 
-      ReferralProcessingResult result = referralController.addReferralAndProcessOutputs(referral);
+      ReferralManager.getInstance().createReferral(referral);
 
       refreshReferralsTable();
       selectReferralById(referral.getId());
 
-      logToApplicationConsole("Generated " + safe(result.getReferralTextFilePath()));
-      logToApplicationConsole("Appended " + safe(result.getReferralEmailsLogPath()));
-      logToApplicationConsole("Appended " + safe(result.getElectronicHealthRecordUpdatesLogPath()));
-
       JOptionPane.showMessageDialog(
           this,
-          "Notification Email Send (Simulated)\n"
-              + safe(result.getReferralTextFilePath()) + "\n"
-              + safe(result.getReferralEmailsLogPath()) + "\n"
-              + safe(result.getElectronicHealthRecordUpdatesLogPath()),
+          "Referral created. Output files and logs have been generated in the output folder.",
           "Referral created",
           JOptionPane.INFORMATION_MESSAGE
       );
     } catch (RuntimeException exception) {
-      logToApplicationConsole("Failed creating referral: " + safe(exception.getMessage()));
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
   }
@@ -191,33 +208,40 @@ public class ReferralsPanel extends JPanel {
       List<SelectionItem> patientOptions = buildPatientSelectionItems();
       List<SelectionItem> clinicianOptions = buildClinicianSelectionItems();
       List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
-      List<SelectionItem> urgencyOptions = buildUrgencySelectionItems();
-      List<SelectionItem> statusOptions = buildStatusSelectionItems();
+      List<SelectionItem> statusOptions = buildReferralStatusSelectionItems();
 
       List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
           FormFieldViewConfiguration.requiredReadOnly("referralId", "Referral ID"),
           FormFieldViewConfiguration.requiredSelect("patientId", "Patient", patientOptions),
-          FormFieldViewConfiguration.requiredSelect("fromClinicianId", "From Clinician", clinicianOptions),
-          FormFieldViewConfiguration.requiredSelect("toClinicianId", "To Clinician", clinicianOptions),
-          FormFieldViewConfiguration.requiredSelect("fromFacilityId", "From Facility", facilityOptions),
-          FormFieldViewConfiguration.requiredSelect("toFacilityId", "To Facility", facilityOptions),
-          FormFieldViewConfiguration.requiredSelect("urgency", "Urgency", urgencyOptions),
+          FormFieldViewConfiguration.requiredSelect("referringClinicianId", "Referring Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referredClinicianId", "Referred Clinician", clinicianOptions),
+          FormFieldViewConfiguration.requiredSelect("referringFacilityId", "Referring Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredSelect("referredFacilityId", "Referred Facility", facilityOptions),
+          FormFieldViewConfiguration.requiredEditable("referralDate", "Referral Date (YYYY-MM-DD)"),
+          FormFieldViewConfiguration.requiredEditable("urgencyLevel", "Urgency Level"),
+          FormFieldViewConfiguration.requiredEditable("referralReason", "Referral Reason"),
           FormFieldViewConfiguration.requiredEditable("clinicalSummary", "Clinical Summary"),
+          FormFieldViewConfiguration.requiredEditable("requestedInvestigations", "Requested Investigations"),
           FormFieldViewConfiguration.requiredSelect("status", "Status", statusOptions),
-          FormFieldViewConfiguration.requiredEditable("dateCreated", "Date Created (YYYY-MM-DD)")
+          FormFieldViewConfiguration.optionalEditable("appointmentId", "Appointment ID"),
+          FormFieldViewConfiguration.optionalEditable("notes", "Notes")
       );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
       defaultValuesByKey.put("referralId", selectedReferral.getId());
       defaultValuesByKey.put("patientId", selectedReferral.getPatientId());
-      defaultValuesByKey.put("fromClinicianId", selectedReferral.getFromClinicianId());
-      defaultValuesByKey.put("toClinicianId", selectedReferral.getToClinicianId());
-      defaultValuesByKey.put("fromFacilityId", selectedReferral.getFromFacilityId());
-      defaultValuesByKey.put("toFacilityId", selectedReferral.getToFacilityId());
-      defaultValuesByKey.put("urgency", selectedReferral.getUrgency());
+      defaultValuesByKey.put("referringClinicianId", selectedReferral.getReferringClinicianId());
+      defaultValuesByKey.put("referredClinicianId", selectedReferral.getReferredToClinicianId());
+      defaultValuesByKey.put("referringFacilityId", selectedReferral.getReferringFacilityId());
+      defaultValuesByKey.put("referredFacilityId", selectedReferral.getReferredToFacilityId());
+      defaultValuesByKey.put("referralDate", selectedReferral.getReferralDate());
+      defaultValuesByKey.put("urgencyLevel", selectedReferral.getUrgencyLevel());
+      defaultValuesByKey.put("referralReason", selectedReferral.getReferralReason());
       defaultValuesByKey.put("clinicalSummary", selectedReferral.getClinicalSummary());
-      defaultValuesByKey.put("status", selectedReferral.getStatus());
-      defaultValuesByKey.put("dateCreated", selectedReferral.getDateCreated());
+      defaultValuesByKey.put("requestedInvestigations", selectedReferral.getRequestedInvestigations());
+      defaultValuesByKey.put("status", selectedReferral.getStatus() == null ? "" : selectedReferral.getStatus().name());
+      defaultValuesByKey.put("appointmentId", selectedReferral.getAppointmentId());
+      defaultValuesByKey.put("notes", selectedReferral.getNotes());
 
       FormDialog formDialog = new FormDialog(owner, "Edit Referral", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
@@ -228,20 +252,29 @@ public class ReferralsPanel extends JPanel {
 
       Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
+      String today = LocalDate.now().toString();
+
       Referral updatedReferral = new Referral(
           selectedReferral.getId(),
           valuesByKey.getOrDefault("patientId", ""),
-          valuesByKey.getOrDefault("fromClinicianId", ""),
-          valuesByKey.getOrDefault("toClinicianId", ""),
-          valuesByKey.getOrDefault("fromFacilityId", ""),
-          valuesByKey.getOrDefault("toFacilityId", ""),
-          valuesByKey.getOrDefault("urgency", ""),
+          valuesByKey.getOrDefault("referringClinicianId", ""),
+          valuesByKey.getOrDefault("referredClinicianId", ""),
+          valuesByKey.getOrDefault("referringFacilityId", ""),
+          valuesByKey.getOrDefault("referredFacilityId", ""),
+          valuesByKey.getOrDefault("referralDate", ""),
+          valuesByKey.getOrDefault("urgencyLevel", ""),
+          valuesByKey.getOrDefault("referralReason", ""),
           valuesByKey.getOrDefault("clinicalSummary", ""),
-          valuesByKey.getOrDefault("status", ""),
-          valuesByKey.getOrDefault("dateCreated", "")
+          valuesByKey.getOrDefault("requestedInvestigations", ""),
+          parseReferralStatus(valuesByKey.getOrDefault("status", "")),
+          valuesByKey.getOrDefault("appointmentId", ""),
+          valuesByKey.getOrDefault("notes", ""),
+          selectedReferral.getCreatedDate(),
+          today
       );
 
       referralController.updateReferral(updatedReferral);
+
       refreshReferralsTable();
       selectReferralById(updatedReferral.getId());
     } catch (RuntimeException exception) {
@@ -249,23 +282,58 @@ public class ReferralsPanel extends JPanel {
     }
   }
 
-  private List<SelectionItem> buildUrgencySelectionItems() {
-    List<SelectionItem> items = new java.util.ArrayList<>();
-    items.add(new SelectionItem("LOW", "LOW"));
-    items.add(new SelectionItem("MEDIUM", "MEDIUM"));
-    items.add(new SelectionItem("HIGH", "HIGH"));
-    return items;
+  private void deleteSelectedReferral() {
+    int selectedRowIndex = referralsTable.getSelectedRow();
+    if (selectedRowIndex < 0) {
+      JOptionPane.showMessageDialog(this, "Select a referral to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    Referral selectedReferral = referralsTableModel.getReferralAtRow(selectedRowIndex);
+    if (selectedReferral == null) {
+      JOptionPane.showMessageDialog(this, "Select a referral to delete.", "Delete", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+
+    String referralId = safe(selectedReferral.getId());
+    if (referralId.isEmpty()) {
+      JOptionPane.showMessageDialog(this, "Selected referral has no identifier.", "Delete", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    int choice = JOptionPane.showConfirmDialog(
+        this,
+        "Delete referral " + referralId + "?",
+        "Confirm delete",
+        JOptionPane.YES_NO_OPTION
+    );
+
+    if (choice != JOptionPane.YES_OPTION) {
+      return;
+    }
+
+    try {
+      referralController.deleteReferral(referralId);
+      refreshReferralsTable();
+      JOptionPane.showMessageDialog(this, "Referral deleted: " + referralId, "Deleted", JOptionPane.INFORMATION_MESSAGE);
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
   }
 
-  private List<SelectionItem> buildStatusSelectionItems() {
-    List<SelectionItem> items = new java.util.ArrayList<>();
-    for (ReferralStatus status : ReferralStatus.values()) {
-      if (status == null) {
-        continue;
-      }
-      items.add(new SelectionItem(status.name(), status.name()));
+  private ReferralStatus parseReferralStatus(String rawStatus) {
+    if (rawStatus == null) {
+      return ReferralStatus.CREATED;
     }
-    return items;
+    String normalized = rawStatus.trim().toUpperCase();
+    if (normalized.isEmpty()) {
+      return ReferralStatus.CREATED;
+    }
+    try {
+      return ReferralStatus.valueOf(normalized);
+    } catch (IllegalArgumentException exception) {
+      return ReferralStatus.CREATED;
+    }
   }
 
   private List<SelectionItem> buildPatientSelectionItems() {
@@ -280,7 +348,7 @@ public class ReferralsPanel extends JPanel {
         continue;
       }
       String name = safe(patient.getFullName());
-      String label = name.isEmpty() ? ("Patient ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Patient " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
@@ -298,7 +366,7 @@ public class ReferralsPanel extends JPanel {
         continue;
       }
       String name = safe(clinician.getFullName());
-      String label = name.isEmpty() ? ("Clinician ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Clinician " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
@@ -316,14 +384,22 @@ public class ReferralsPanel extends JPanel {
         continue;
       }
       String name = safe(facility.getName());
-      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Facility " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
   }
 
+  private List<SelectionItem> buildReferralStatusSelectionItems() {
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (ReferralStatus status : ReferralStatus.values()) {
+      items.add(new SelectionItem(status.name(), status.name()));
+    }
+    return items;
+  }
+
   private Map<String, String> buildPatientNamesByPatientId() {
-    Map<String, String> patientNamesByPatientId = new LinkedHashMap<>();
+    Map<String, String> namesById = new LinkedHashMap<>();
     List<Patient> patients = patientController.getAllPatients();
     for (Patient patient : patients) {
       if (patient == null) {
@@ -333,13 +409,13 @@ public class ReferralsPanel extends JPanel {
       if (id.isEmpty()) {
         continue;
       }
-      patientNamesByPatientId.put(id, safe(patient.getFullName()));
+      namesById.put(id, safe(patient.getFullName()));
     }
-    return patientNamesByPatientId;
+    return namesById;
   }
 
   private Map<String, String> buildClinicianNamesByClinicianId() {
-    Map<String, String> clinicianNamesByClinicianId = new LinkedHashMap<>();
+    Map<String, String> namesById = new LinkedHashMap<>();
     List<Clinician> clinicians = clinicianController.getAllClinicians();
     for (Clinician clinician : clinicians) {
       if (clinician == null) {
@@ -349,13 +425,13 @@ public class ReferralsPanel extends JPanel {
       if (id.isEmpty()) {
         continue;
       }
-      clinicianNamesByClinicianId.put(id, safe(clinician.getFullName()));
+      namesById.put(id, safe(clinician.getFullName()));
     }
-    return clinicianNamesByClinicianId;
+    return namesById;
   }
 
   private Map<String, String> buildFacilityNamesByFacilityId() {
-    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+    Map<String, String> namesById = new LinkedHashMap<>();
     List<Facility> facilities = facilityController.getAllFacilities();
     for (Facility facility : facilities) {
       if (facility == null) {
@@ -365,9 +441,9 @@ public class ReferralsPanel extends JPanel {
       if (id.isEmpty()) {
         continue;
       }
-      facilityNamesByFacilityId.put(id, safe(facility.getName()));
+      namesById.put(id, safe(facility.getName()));
     }
-    return facilityNamesByFacilityId;
+    return namesById;
   }
 
   private void selectReferralById(String referralId) {
@@ -382,13 +458,6 @@ public class ReferralsPanel extends JPanel {
         referralsTable.scrollRectToVisible(referralsTable.getCellRect(rowIndex, 0, true));
         return;
       }
-    }
-  }
-
-  private void logToApplicationConsole(String message) {
-    Window owner = SwingUtilities.getWindowAncestor(this);
-    if (owner instanceof MainFrame) {
-      ((MainFrame) owner).setStatusText(message);
     }
   }
 

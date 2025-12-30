@@ -11,20 +11,18 @@ import java.util.Map;
 public class ReferralsTableModel extends AbstractTableModel {
 
   private final String[] columnNames = new String[] {
-      "Referral ID",
-      "Patient ID",
-      "Patient Name",
-      "From Clinician ID",
-      "From Clinician Name",
-      "To Clinician ID",
-      "To Clinician Name",
-      "From Facility ID",
-      "From Facility Name",
-      "To Facility ID",
-      "To Facility Name",
+      "Patient",
+      "Referring Clinician",
+      "Referred Clinician",
+      "Referring Facility",
+      "Referred Facility",
       "Urgency",
       "Status",
-      "Date Created"
+      "Referral Reason",
+      "Clinical Summary",
+      "Requested Investigations",
+      "Notes",
+      "Created Date"
   };
 
   private List<Referral> referrals = new ArrayList<>();
@@ -72,50 +70,62 @@ public class ReferralsTableModel extends AbstractTableModel {
       return "";
     }
 
+    String patientId = safe(referral.getPatientId());
+    String referringClinicianId = safe(referral.getReferringClinicianId());
+    String referredClinicianId = safe(referral.getReferredToClinicianId());
+    String referringFacilityId = safe(referral.getReferringFacilityId());
+    String referredFacilityId = safe(referral.getReferredToFacilityId());
+
     if (columnIndex == 0) {
-      return referral.getId();
+      return resolveNameOrId(patientId, patientNamesByPatientId, "Patient");
     }
     if (columnIndex == 1) {
-      return referral.getPatientId();
+      return resolveNameOrId(referringClinicianId, clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 2) {
-      return patientNamesByPatientId.getOrDefault(safe(referral.getPatientId()), "");
+      return resolveNameOrId(referredClinicianId, clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 3) {
-      return referral.getFromClinicianId();
+      return resolveNameOrId(referringFacilityId, facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 4) {
-      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getFromClinicianId()), "");
+      return resolveNameOrId(referredFacilityId, facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 5) {
-      return referral.getToClinicianId();
+      return safe(referral.getUrgencyLevel());
     }
     if (columnIndex == 6) {
-      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getToClinicianId()), "");
+      return referral.getStatus() == null ? "" : referral.getStatus().name();
     }
     if (columnIndex == 7) {
-      return referral.getFromFacilityId();
+      return safe(referral.getReferralReason());
     }
     if (columnIndex == 8) {
-      return facilityNamesByFacilityId.getOrDefault(safe(referral.getFromFacilityId()), "");
+      return safe(referral.getClinicalSummary());
     }
     if (columnIndex == 9) {
-      return referral.getToFacilityId();
+      return safe(referral.getRequestedInvestigations());
     }
     if (columnIndex == 10) {
-      return facilityNamesByFacilityId.getOrDefault(safe(referral.getToFacilityId()), "");
+      return safe(referral.getNotes());
     }
     if (columnIndex == 11) {
-      return referral.getUrgency();
-    }
-    if (columnIndex == 12) {
-      return referral.getStatus();
-    }
-    if (columnIndex == 13) {
-      return referral.getDateCreated();
+      return safe(referral.getCreatedDate());
     }
 
     return "";
+  }
+
+  private String resolveNameOrId(String id, Map<String, String> namesById, String entityLabel) {
+    if (id.isEmpty()) {
+      return "";
+    }
+    String name = namesById.getOrDefault(id, "");
+    String safeName = safe(name);
+    if (!safeName.isEmpty()) {
+      return safeName;
+    }
+    return entityLabel + " " + id;
   }
 
   private String safe(String value) {

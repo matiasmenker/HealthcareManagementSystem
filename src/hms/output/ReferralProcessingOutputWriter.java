@@ -9,150 +9,101 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Objects;
 
 public class ReferralProcessingOutputWriter {
 
   private final Path outputDirectory;
+  private final Path referralEmailsLogPath;
+  private final Path electronicHealthRecordUpdatesLogPath;
 
   public ReferralProcessingOutputWriter(Path outputDirectory) {
-    this.outputDirectory = Objects.requireNonNull(outputDirectory, "outputDirectory");
+    if (outputDirectory == null) {
+      throw new IllegalArgumentException("outputDirectory is required");
+    }
+    this.outputDirectory = outputDirectory;
+    this.referralEmailsLogPath = outputDirectory.resolve("referral_emails.log");
+    this.electronicHealthRecordUpdatesLogPath = outputDirectory.resolve("ehr_updates.log");
+    ensureOutputDirectoryExists();
   }
 
-  public String writeReferralTextFile(Referral referral,
-                                      Patient patient,
-                                      Clinician fromClinician,
-                                      Clinician toClinician,
-                                      Facility fromFacility,
-                                      Facility toFacility) {
-    Objects.requireNonNull(referral, "referral");
-    Objects.requireNonNull(patient, "patient");
-    Objects.requireNonNull(fromClinician, "fromClinician");
-    Objects.requireNonNull(toClinician, "toClinician");
-    Objects.requireNonNull(fromFacility, "fromFacility");
-    Objects.requireNonNull(toFacility, "toFacility");
+  public void writeReferralTextFile(Referral referral,
+                                   Patient patient,
+                                   Clinician referringClinician,
+                                   Clinician referredClinician,
+                                   Facility referringFacility,
+                                   Facility referredFacility) {
+    String referralId = safe(referral.getId());
+    Path referralFilePath = outputDirectory.resolve("referral_" + referralId + ".txt");
 
-    ensureOutputDirectoryExists();
+    String content =
+        "Referral Document\n"
+            + "Referral Identifier: " + referralId + "\n"
+            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + " (ID: " + safe(referral.getPatientId()) + ")\n"
+            + "Referring Clinician: " + safe(referringClinician == null ? "" : referringClinician.getFullName()) + " (ID: " + safe(referral.getReferringClinicianId()) + ")\n"
+            + "Referred Clinician: " + safe(referredClinician == null ? "" : referredClinician.getFullName()) + " (ID: " + safe(referral.getReferredToClinicianId()) + ")\n"
+            + "Referring Facility: " + safe(referringFacility == null ? "" : referringFacility.getName()) + " (ID: " + safe(referral.getReferringFacilityId()) + ")\n"
+            + "Referred Facility: " + safe(referredFacility == null ? "" : referredFacility.getName()) + " (ID: " + safe(referral.getReferredToFacilityId()) + ")\n"
+            + "Referral Date: " + safe(referral.getReferralDate()) + "\n"
+            + "Urgency Level: " + safe(referral.getUrgencyLevel()) + "\n"
+            + "Referral Reason: " + safe(referral.getReferralReason()) + "\n"
+            + "Clinical Summary: " + safe(referral.getClinicalSummary()) + "\n"
+            + "Requested Investigations: " + safe(referral.getRequestedInvestigations()) + "\n"
+            + "Notes: " + safe(referral.getNotes()) + "\n"
+            + "Status: " + (referral.getStatus() == null ? "" : referral.getStatus().name()) + "\n"
+            + "Created Date: " + safe(referral.getCreatedDate()) + "\n"
+            + "Last Updated: " + safe(referral.getLastUpdated()) + "\n";
 
-    String fileName = "referral_" + safe(referral.getId()) + ".txt";
-    Path filePath = outputDirectory.resolve(fileName);
-
-    String content = buildReferralTextFileContent(referral, patient, fromClinician, toClinician, fromFacility, toFacility);
-
-    try {
-      Files.writeString(filePath, content);
-      return filePath.toString();
-    } catch (IOException exception) {
-      throw new RuntimeException("Failed writing referral output file: " + filePath.toString(), exception);
-    }
+    writeFile(referralFilePath, content);
   }
 
-  public String appendReferralEmailLog(Referral referral,
-                                      Patient patient,
-                                      Clinician fromClinician,
-                                      Clinician toClinician) {
-    Objects.requireNonNull(referral, "referral");
-    Objects.requireNonNull(patient, "patient");
-    Objects.requireNonNull(fromClinician, "fromClinician");
-    Objects.requireNonNull(toClinician, "toClinician");
+  public void appendReferralEmailLog(Referral referral,
+                                    Patient patient,
+                                    Clinician referredClinician) {
+    String logEntry =
+        "Referral Email Notification\n"
+            + "Referral Identifier: " + safe(referral.getId()) + "\n"
+            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + "\n"
+            + "Recipient Clinician: " + safe(referredClinician == null ? "" : referredClinician.getFullName()) + "\n"
+            + "Message: A new referral has been created and requires your attention.\n"
+            + "\n";
 
-    ensureOutputDirectoryExists();
-
-    Path logFilePath = outputDirectory.resolve("referral_emails.log");
-    String lineSeparator = System.lineSeparator();
-
-    String entry = "Referral Email Simulation" + lineSeparator
-        + "Referral Identifier: " + safe(referral.getId()) + lineSeparator
-        + "Recipient Email Address: " + safe(toClinician.getEmail()) + lineSeparator
-        + "Sender Email Address: " + safe(fromClinician.getEmail()) + lineSeparator
-        + "Subject: Referral " + safe(referral.getId()) + " - " + safe(referral.getUrgency()) + lineSeparator
-        + "Message: Patient " + safe(patient.getFullName()) + " (Identifier: " + safe(patient.getId()) + "). "
-        + safe(referral.getClinicalSummary()) + lineSeparator
-        + "----" + lineSeparator;
-
-    try {
-      Files.writeString(logFilePath, entry, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-      return logFilePath.toString();
-    } catch (IOException exception) {
-      throw new RuntimeException("Failed appending referral emails log: " + logFilePath.toString(), exception);
-    }
+    appendFile(referralEmailsLogPath, logEntry);
   }
 
-  public String appendElectronicHealthRecordUpdatesLog(Referral referral, Patient patient) {
-    Objects.requireNonNull(referral, "referral");
-    Objects.requireNonNull(patient, "patient");
+  public void appendElectronicHealthRecordUpdateLog(Referral referral,
+                                                   Patient patient) {
+    String logEntry =
+        "Electronic Health Record Update\n"
+            + "Referral Identifier: " + safe(referral.getId()) + "\n"
+            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + "\n"
+            + "Update: Referral recorded in patient health record.\n"
+            + "\n";
 
-    ensureOutputDirectoryExists();
-
-    Path logFilePath = outputDirectory.resolve("electronic_health_record_updates.log");
-    String lineSeparator = System.lineSeparator();
-
-    String entry = "Electronic Health Record Update Simulation" + lineSeparator
-        + "Patient Identifier: " + safe(patient.getId()) + lineSeparator
-        + "Patient Name: " + safe(patient.getFullName()) + lineSeparator
-        + "Referral Identifier: " + safe(referral.getId()) + lineSeparator
-        + "Referral Status: " + safe(referral.getStatus()) + lineSeparator
-        + "Referral Creation Date: " + safe(referral.getDateCreated()) + lineSeparator
-        + "----" + lineSeparator;
-
-    try {
-      Files.writeString(logFilePath, entry, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-      return logFilePath.toString();
-    } catch (IOException exception) {
-      throw new RuntimeException("Failed appending electronic health record updates log: " + logFilePath.toString(), exception);
-    }
+    appendFile(electronicHealthRecordUpdatesLogPath, logEntry);
   }
 
   private void ensureOutputDirectoryExists() {
     try {
       Files.createDirectories(outputDirectory);
     } catch (IOException exception) {
-      throw new RuntimeException("Failed creating output directory: " + outputDirectory.toString(), exception);
+      throw new RuntimeException("Failed creating output directory: " + outputDirectory);
     }
   }
 
-  private String buildReferralTextFileContent(Referral referral,
-                                             Patient patient,
-                                             Clinician fromClinician,
-                                             Clinician toClinician,
-                                             Facility fromFacility,
-                                             Facility toFacility) {
-    String lineSeparator = System.lineSeparator();
+  private void writeFile(Path path, String content) {
+    try {
+      Files.writeString(path, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+    } catch (IOException exception) {
+      throw new RuntimeException("Failed writing file: " + path + " (" + exception.getMessage() + ")");
+    }
+  }
 
-    return "Referral Output" + lineSeparator
-        + "Referral Identifier: " + safe(referral.getId()) + lineSeparator
-        + "Referral Status: " + safe(referral.getStatus()) + lineSeparator
-        + "Urgency: " + safe(referral.getUrgency()) + lineSeparator
-        + "Creation Date: " + safe(referral.getDateCreated()) + lineSeparator
-        + lineSeparator
-        + "Patient Details" + lineSeparator
-        + "Patient Identifier: " + safe(patient.getId()) + lineSeparator
-        + "Patient Name: " + safe(patient.getFullName()) + lineSeparator
-        + "Patient Email Address: " + safe(patient.getEmail()) + lineSeparator
-        + "Patient National Health Service Number: " + safe(patient.getNhsNumber()) + lineSeparator
-        + lineSeparator
-        + "Referring Clinician" + lineSeparator
-        + "Clinician Identifier: " + safe(fromClinician.getId()) + lineSeparator
-        + "Clinician Name: " + safe(fromClinician.getFullName()) + lineSeparator
-        + "Clinician Email Address: " + safe(fromClinician.getEmail()) + lineSeparator
-        + lineSeparator
-        + "Receiving Clinician" + lineSeparator
-        + "Clinician Identifier: " + safe(toClinician.getId()) + lineSeparator
-        + "Clinician Name: " + safe(toClinician.getFullName()) + lineSeparator
-        + "Clinician Email Address: " + safe(toClinician.getEmail()) + lineSeparator
-        + lineSeparator
-        + "Referring Facility" + lineSeparator
-        + "Facility Identifier: " + safe(fromFacility.getId()) + lineSeparator
-        + "Facility Name: " + safe(fromFacility.getName()) + lineSeparator
-        + "Facility Type: " + safe(fromFacility.getType()) + lineSeparator
-        + lineSeparator
-        + "Receiving Facility" + lineSeparator
-        + "Facility Identifier: " + safe(toFacility.getId()) + lineSeparator
-        + "Facility Name: " + safe(toFacility.getName()) + lineSeparator
-        + "Facility Type: " + safe(toFacility.getType()) + lineSeparator
-        + lineSeparator
-        + "Clinical Summary" + lineSeparator
-        + safe(referral.getClinicalSummary()) + lineSeparator;
+  private void appendFile(Path path, String content) {
+    try {
+      Files.writeString(path, content, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+    } catch (IOException exception) {
+      throw new RuntimeException("Failed appending file: " + path + " (" + exception.getMessage() + ")");
+    }
   }
 
   private String safe(String value) {

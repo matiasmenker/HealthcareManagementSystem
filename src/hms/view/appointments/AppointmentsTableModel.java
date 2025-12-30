@@ -12,13 +12,10 @@ public class AppointmentsTableModel extends AbstractTableModel {
 
   private final String[] columnNames = new String[] {
       "Appointment ID",
-      "Patient ID",
-      "Patient Name",
-      "Clinician ID",
-      "Clinician Name",
-      "Facility ID",
-      "Facility Name",
       "Date/Time",
+      "Patient",
+      "Clinician",
+      "Facility",
       "Status",
       "Reason"
   };
@@ -69,37 +66,39 @@ public class AppointmentsTableModel extends AbstractTableModel {
     }
 
     if (columnIndex == 0) {
-      return appointment.getId();
+      return safe(appointment.getId());
     }
     if (columnIndex == 1) {
-      return appointment.getPatientId();
+      return safe(appointment.getDateTime());
     }
     if (columnIndex == 2) {
-      return patientNamesByPatientId.getOrDefault(safe(appointment.getPatientId()), "");
+      return resolveNameOrFallbackId(safe(appointment.getPatientId()), patientNamesByPatientId, "Patient");
     }
     if (columnIndex == 3) {
-      return appointment.getClinicianId();
+      return resolveNameOrFallbackId(safe(appointment.getClinicianId()), clinicianNamesByClinicianId, "Clinician");
     }
     if (columnIndex == 4) {
-      return clinicianNamesByClinicianId.getOrDefault(safe(appointment.getClinicianId()), "");
+      return resolveNameOrFallbackId(safe(appointment.getFacilityId()), facilityNamesByFacilityId, "Facility");
     }
     if (columnIndex == 5) {
-      return appointment.getFacilityId();
-    }
-    if (columnIndex == 6) {
-      return facilityNamesByFacilityId.getOrDefault(safe(appointment.getFacilityId()), "");
-    }
-    if (columnIndex == 7) {
-      return appointment.getDateTime();
-    }
-    if (columnIndex == 8) {
       return appointment.getStatus() == null ? "" : appointment.getStatus().name();
     }
-    if (columnIndex == 9) {
-      return appointment.getReason();
+    if (columnIndex == 6) {
+      return safe(appointment.getReason());
     }
 
     return "";
+  }
+
+  private String resolveNameOrFallbackId(String id, Map<String, String> namesById, String label) {
+    if (id.isEmpty()) {
+      return "";
+    }
+    String name = safe(namesById.get(id));
+    if (!name.isEmpty()) {
+      return name;
+    }
+    return label + " " + id;
   }
 
   private String safe(String value) {

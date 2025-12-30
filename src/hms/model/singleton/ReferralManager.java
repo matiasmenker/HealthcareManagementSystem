@@ -10,6 +10,7 @@ import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
 import hms.repository.ReferralRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,6 +24,8 @@ public class ReferralManager {
   private final FacilityRepository facilityRepository;
   private final ReferralProcessingOutputWriter referralProcessingOutputWriter;
 
+  private final List<Referral> processedReferrals = new ArrayList<>();
+
   private ReferralManager(ReferralRepository referralRepository,
                           PatientRepository patientRepository,
                           ClinicianRepository clinicianRepository,
@@ -35,11 +38,18 @@ public class ReferralManager {
     this.referralProcessingOutputWriter = Objects.requireNonNull(referralProcessingOutputWriter, "referralProcessingOutputWriter");
   }
 
-  public static synchronized ReferralManager getInstance(ReferralRepository referralRepository,
-                                                        PatientRepository patientRepository,
-                                                        ClinicianRepository clinicianRepository,
-                                                        FacilityRepository facilityRepository,
-                                                        ReferralProcessingOutputWriter referralProcessingOutputWriter) {
+  public static ReferralManager getInstance() {
+    if (instance == null) {
+      throw new IllegalStateException("ReferralManager has not been initialized");
+    }
+    return instance;
+  }
+
+  public static ReferralManager getInstance(ReferralRepository referralRepository,
+                                            PatientRepository patientRepository,
+                                            ClinicianRepository clinicianRepository,
+                                            FacilityRepository facilityRepository,
+                                            ReferralProcessingOutputWriter referralProcessingOutputWriter) {
     if (instance == null) {
       instance = new ReferralManager(
           referralRepository,
@@ -52,92 +62,40 @@ public class ReferralManager {
     return instance;
   }
 
-  public static synchronized ReferralManager getInstance() {
-    if (instance == null) {
-      throw new IllegalStateException("ReferralManager is not initialized. Initialize it in Main before using it.");
-    }
-    return instance;
-  }
-
-  public ReferralProcessingResult createReferral(Referral referral) {
-    if (referral == null) {
-      throw new IllegalArgumentException("Referral is required");
-    }
-
-    Patient patient = findPatientById(referral.getPatientId());
-    if (patient == null) {
-      throw new IllegalArgumentException("Patient not found: " + safe(referral.getPatientId()));
-    }
-
-    Clinician fromClinician = clinicianRepository.findById(referral.getFromClinicianId());
-    if (fromClinician == null) {
-      throw new IllegalArgumentException("From Clinician not found: " + safe(referral.getFromClinicianId()));
-    }
-
-    Clinician toClinician = clinicianRepository.findById(referral.getToClinicianId());
-    if (toClinician == null) {
-      throw new IllegalArgumentException("To Clinician not found: " + safe(referral.getToClinicianId()));
-    }
-
-    Facility fromFacility = facilityRepository.findById(referral.getFromFacilityId());
-    if (fromFacility == null) {
-      throw new IllegalArgumentException("From Facility not found: " + safe(referral.getFromFacilityId()));
-    }
-
-    Facility toFacility = facilityRepository.findById(referral.getToFacilityId());
-    if (toFacility == null) {
-      throw new IllegalArgumentException("To Facility not found: " + safe(referral.getToFacilityId()));
-    }
+  public void createReferral(Referral referral) {
+    Objects.requireNonNull(referral, "referral");
 
     referralRepository.add(referral);
+    processedReferrals.add(referral);
 
-    String referralTextFilePath = referralProcessingOutputWriter.writeReferralTextFile(
+    Patient patient = patientRepository.findById(referral.getPatientId());
+    Clinician referringClinician = clinicianRepository.findById(referral.getReferringClinicianId());
+    Clinician referredClinician = clinicianRepository.findById(referral.getReferredToClinicianId());
+    Facility referringFacility = facilityRepository.findById(referral.getReferringFacilityId());
+    Facility referredFacility = facilityRepository.findById(referral.getReferredToFacilityId());
+
+    referralProcessingOutputWriter.writeReferralTextFile(
         referral,
         patient,
-        fromClinician,
-        toClinician,
-        fromFacility,
-        toFacility
+        referringClinician,
+        referredClinician,
+        referringFacility,
+        referredFacility
     );
 
-    String referralEmailsLogPath = referralProcessingOutputWriter.appendReferralEmailLog(
+    referralProcessingOutputWriter.appendReferralEmailLog(
         referral,
         patient,
-        fromClinician,
-        toClinician
+        referredClinician
     );
 
-    String electronicHealthRecordUpdatesLogPath = referralProcessingOutputWriter.appendElectronicHealthRecordUpdatesLog(
+    referralProcessingOutputWriter.appendElectronicHealthRecordUpdateLog(
         referral,
         patient
     );
-
-    return new ReferralProcessingResult(referralTextFilePath, referralEmailsLogPath, electronicHealthRecordUpdatesLogPath);
   }
 
-  private Patient findPatientById(String patientId) {
-    String normalizedPatientId = safe(patientId);
-    if (normalizedPatientId.isEmpty()) {
-      return null;
-    }
-
-    List<Patient> patients = patientRepository.findAll();
-    for (Patient patient : patients) {
-      if (patient == null) {
-        continue;
-      }
-      if (normalizedPatientId.equals(safe(patient.getId()))) {
-        return patient;
-      }
-    }
-
-    return null;
-  }
-
-  private String safe(String value) {
-    if (value == null) {
-      return "";
-    }
-    return value.trim();
+  public List<Referral> getProcessedReferrals() {
+    return new ArrayList<>(processedReferrals);
   }
 }

@@ -1,40 +1,60 @@
 package hms.model;
 
+import hms.model.enums.ReferralStatus;
+
 import java.util.Objects;
 
 public class Referral {
 
   private String id;
   private String patientId;
-  private String fromClinicianId;
-  private String toClinicianId;
-  private String fromFacilityId;
-  private String toFacilityId;
-  private String urgency;
+  private String referringClinicianId;
+  private String referredToClinicianId;
+  private String referringFacilityId;
+  private String referredToFacilityId;
+  private String referralDate;
+  private String urgencyLevel;
+  private String referralReason;
   private String clinicalSummary;
-  private String status;
-  private String dateCreated;
+  private String requestedInvestigations;
+  private ReferralStatus status;
+  private String appointmentId;
+  private String notes;
+  private String createdDate;
+  private String lastUpdated;
 
   public Referral(String id,
                   String patientId,
-                  String fromClinicianId,
-                  String toClinicianId,
-                  String fromFacilityId,
-                  String toFacilityId,
-                  String urgency,
+                  String referringClinicianId,
+                  String referredToClinicianId,
+                  String referringFacilityId,
+                  String referredToFacilityId,
+                  String referralDate,
+                  String urgencyLevel,
+                  String referralReason,
                   String clinicalSummary,
-                  String status,
-                  String dateCreated) {
+                  String requestedInvestigations,
+                  ReferralStatus status,
+                  String appointmentId,
+                  String notes,
+                  String createdDate,
+                  String lastUpdated) {
     this.id = safe(id);
     this.patientId = safe(patientId);
-    this.fromClinicianId = safe(fromClinicianId);
-    this.toClinicianId = safe(toClinicianId);
-    this.fromFacilityId = safe(fromFacilityId);
-    this.toFacilityId = safe(toFacilityId);
-    this.urgency = safe(urgency);
+    this.referringClinicianId = safe(referringClinicianId);
+    this.referredToClinicianId = safe(referredToClinicianId);
+    this.referringFacilityId = safe(referringFacilityId);
+    this.referredToFacilityId = safe(referredToFacilityId);
+    this.referralDate = safe(referralDate);
+    this.urgencyLevel = safe(urgencyLevel);
+    this.referralReason = safe(referralReason);
     this.clinicalSummary = safe(clinicalSummary);
-    this.status = safe(status);
-    this.dateCreated = safe(dateCreated);
+    this.requestedInvestigations = safe(requestedInvestigations);
+    this.status = status == null ? ReferralStatus.CREATED : status;
+    this.appointmentId = safe(appointmentId);
+    this.notes = safe(notes);
+    this.createdDate = safe(createdDate);
+    this.lastUpdated = safe(lastUpdated);
   }
 
   public String getId() {
@@ -53,44 +73,60 @@ public class Referral {
     this.patientId = safe(patientId);
   }
 
-  public String getFromClinicianId() {
-    return fromClinicianId;
+  public String getReferringClinicianId() {
+    return referringClinicianId;
   }
 
-  public void setFromClinicianId(String fromClinicianId) {
-    this.fromClinicianId = safe(fromClinicianId);
+  public void setReferringClinicianId(String referringClinicianId) {
+    this.referringClinicianId = safe(referringClinicianId);
   }
 
-  public String getToClinicianId() {
-    return toClinicianId;
+  public String getReferredToClinicianId() {
+    return referredToClinicianId;
   }
 
-  public void setToClinicianId(String toClinicianId) {
-    this.toClinicianId = safe(toClinicianId);
+  public void setReferredToClinicianId(String referredToClinicianId) {
+    this.referredToClinicianId = safe(referredToClinicianId);
   }
 
-  public String getFromFacilityId() {
-    return fromFacilityId;
+  public String getReferringFacilityId() {
+    return referringFacilityId;
   }
 
-  public void setFromFacilityId(String fromFacilityId) {
-    this.fromFacilityId = safe(fromFacilityId);
+  public void setReferringFacilityId(String referringFacilityId) {
+    this.referringFacilityId = safe(referringFacilityId);
   }
 
-  public String getToFacilityId() {
-    return toFacilityId;
+  public String getReferredToFacilityId() {
+    return referredToFacilityId;
   }
 
-  public void setToFacilityId(String toFacilityId) {
-    this.toFacilityId = safe(toFacilityId);
+  public void setReferredToFacilityId(String referredToFacilityId) {
+    this.referredToFacilityId = safe(referredToFacilityId);
   }
 
-  public String getUrgency() {
-    return urgency;
+  public String getReferralDate() {
+    return referralDate;
   }
 
-  public void setUrgency(String urgency) {
-    this.urgency = safe(urgency);
+  public void setReferralDate(String referralDate) {
+    this.referralDate = safe(referralDate);
+  }
+
+  public String getUrgencyLevel() {
+    return urgencyLevel;
+  }
+
+  public void setUrgencyLevel(String urgencyLevel) {
+    this.urgencyLevel = safe(urgencyLevel);
+  }
+
+  public String getReferralReason() {
+    return referralReason;
+  }
+
+  public void setReferralReason(String referralReason) {
+    this.referralReason = safe(referralReason);
   }
 
   public String getClinicalSummary() {
@@ -101,43 +137,57 @@ public class Referral {
     this.clinicalSummary = safe(clinicalSummary);
   }
 
-  public String getStatus() {
+  public String getRequestedInvestigations() {
+    return requestedInvestigations;
+  }
+
+  public void setRequestedInvestigations(String requestedInvestigations) {
+    this.requestedInvestigations = safe(requestedInvestigations);
+  }
+
+  public ReferralStatus getStatus() {
     return status;
   }
 
-  public void setStatus(String status) {
-    this.status = safe(status);
+  public void setStatus(ReferralStatus status) {
+    this.status = status == null ? ReferralStatus.CREATED : status;
   }
 
-  public String getDateCreated() {
-    return dateCreated;
+  public String getAppointmentId() {
+    return appointmentId;
   }
 
-  public void setDateCreated(String dateCreated) {
-    this.dateCreated = safe(dateCreated);
+  public void setAppointmentId(String appointmentId) {
+    this.appointmentId = safe(appointmentId);
+  }
+
+  public String getNotes() {
+    return notes;
+  }
+
+  public void setNotes(String notes) {
+    this.notes = safe(notes);
   }
 
   public String getCreatedDate() {
-    return getDateCreated();
+    return createdDate;
   }
 
   public void setCreatedDate(String createdDate) {
-    setDateCreated(createdDate);
+    this.createdDate = safe(createdDate);
   }
 
-  public String getReferralReason() {
-    return getClinicalSummary();
+  public String getLastUpdated() {
+    return lastUpdated;
   }
 
-  public void setReferralReason(String referralReason) {
-    setClinicalSummary(referralReason);
+  public void setLastUpdated(String lastUpdated) {
+    this.lastUpdated = safe(lastUpdated);
   }
 
   @Override
   public String toString() {
-    return "Referral{id='" + safe(id) + "', patientId='" + safe(patientId) + "', fromClinicianId='" + safe(fromClinicianId)
-        + "', toClinicianId='" + safe(toClinicianId) + "', fromFacilityId='" + safe(fromFacilityId) + "', toFacilityId='"
-        + safe(toFacilityId) + "', urgency='" + safe(urgency) + "', status='" + safe(status) + "', dateCreated='" + safe(dateCreated) + "'}";
+    return "Referral{id='" + safe(id) + "', patientId='" + safe(patientId) + "', status='" + (status == null ? "" : status.name()) + "'}";
   }
 
   @Override

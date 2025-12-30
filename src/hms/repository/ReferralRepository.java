@@ -33,16 +33,17 @@ public class ReferralRepository extends BaseRepository {
   }
 
   public Referral findById(String referralId) {
-    if (referralId == null) {
+    String normalizedId = normalizeId(referralId);
+    if (normalizedId.isEmpty()) {
       return null;
     }
-    return referralsById.get(referralId.trim());
+    return referralsById.get(normalizedId);
   }
 
   public void add(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
-    String referralId = safe(referral.getId());
+    String referralId = normalizeId(referral.getId());
     if (referralId.isEmpty()) {
       throw new IllegalArgumentException("Referral id is required");
     }
@@ -57,7 +58,7 @@ public class ReferralRepository extends BaseRepository {
   public void update(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
-    String referralId = safe(referral.getId());
+    String referralId = normalizeId(referral.getId());
     if (referralId.isEmpty()) {
       throw new IllegalArgumentException("Referral id is required");
     }
@@ -68,46 +69,76 @@ public class ReferralRepository extends BaseRepository {
     }
 
     existing.setPatientId(referral.getPatientId());
-    existing.setFromClinicianId(referral.getFromClinicianId());
-    existing.setToClinicianId(referral.getToClinicianId());
-    existing.setFromFacilityId(referral.getFromFacilityId());
-    existing.setToFacilityId(referral.getToFacilityId());
-    existing.setUrgency(referral.getUrgency());
+    existing.setReferringClinicianId(referral.getReferringClinicianId());
+    existing.setReferredToClinicianId(referral.getReferredToClinicianId());
+    existing.setReferringFacilityId(referral.getReferringFacilityId());
+    existing.setReferredToFacilityId(referral.getReferredToFacilityId());
+    existing.setReferralDate(referral.getReferralDate());
+    existing.setUrgencyLevel(referral.getUrgencyLevel());
+    existing.setReferralReason(referral.getReferralReason());
     existing.setClinicalSummary(referral.getClinicalSummary());
+    existing.setRequestedInvestigations(referral.getRequestedInvestigations());
     existing.setStatus(referral.getStatus());
-    existing.setDateCreated(referral.getDateCreated());
+    existing.setAppointmentId(referral.getAppointmentId());
+    existing.setNotes(referral.getNotes());
+    existing.setCreatedDate(referral.getCreatedDate());
+    existing.setLastUpdated(referral.getLastUpdated());
+  }
+
+  public void delete(String referralId) {
+    String normalizedId = normalizeId(referralId);
+    if (normalizedId.isEmpty()) {
+      throw new IllegalArgumentException("Referral id is required");
+    }
+
+    Referral existing = referralsById.get(normalizedId);
+    if (existing == null) {
+      throw new IllegalArgumentException("Referral not found: " + normalizedId);
+    }
+
+    referrals.remove(existing);
+    referralsById.remove(normalizedId);
   }
 
   private Referral mapRowToReferral(Map<String, String> row) {
     String referralId = value(row, "referral_id");
     String patientId = value(row, "patient_id");
-    String fromClinicianId = value(row, "referring_clinician_id");
-    String toClinicianId = value(row, "referred_to_clinician_id");
-    String fromFacilityId = value(row, "referring_facility_id");
-    String toFacilityId = value(row, "referred_to_facility_id");
-
+    String referringClinicianId = value(row, "referring_clinician_id");
+    String referredToClinicianId = value(row, "referred_to_clinician_id");
+    String referringFacilityId = value(row, "referring_facility_id");
+    String referredToFacilityId = value(row, "referred_to_facility_id");
+    String referralDate = value(row, "referral_date");
     String urgencyLevel = value(row, "urgency_level");
+    String referralReason = value(row, "referral_reason");
     String clinicalSummary = value(row, "clinical_summary");
-    String rawStatus = value(row, "status");
+    String requestedInvestigations = value(row, "requested_investigations");
+    String status = value(row, "status");
+    String appointmentId = value(row, "appointment_id");
+    String notes = value(row, "notes");
     String createdDate = value(row, "created_date");
+    String lastUpdated = value(row, "last_updated");
 
-    if (safe(referralId).isEmpty()) {
+    if (referralId.isEmpty()) {
       throw new IllegalArgumentException("Referral row is missing required field: referral_id");
     }
-
-    String normalizedStatus = parseReferralStatus(rawStatus).name();
 
     return new Referral(
         referralId,
         patientId,
-        fromClinicianId,
-        toClinicianId,
-        fromFacilityId,
-        toFacilityId,
+        referringClinicianId,
+        referredToClinicianId,
+        referringFacilityId,
+        referredToFacilityId,
+        referralDate,
         urgencyLevel,
+        referralReason,
         clinicalSummary,
-        normalizedStatus,
-        createdDate
+        requestedInvestigations,
+        parseReferralStatus(status),
+        appointmentId,
+        notes,
+        createdDate,
+        lastUpdated
     );
   }
 
@@ -148,7 +179,7 @@ public class ReferralRepository extends BaseRepository {
     return ReferralStatus.CREATED;
   }
 
-  private String safe(String value) {
+  private String normalizeId(String value) {
     if (value == null) {
       return "";
     }
