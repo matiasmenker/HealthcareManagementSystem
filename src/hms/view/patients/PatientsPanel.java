@@ -1,10 +1,13 @@
 package hms.view.patients;
 
+import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.model.Facility;
 import hms.model.Patient;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
+import hms.view.common.SelectionItem;
 
 import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
@@ -22,167 +25,228 @@ import java.util.Objects;
 
 public class PatientsPanel extends JPanel {
 
-	private final PatientController patientController;
-	private final PatientsTableModel patientsTableModel;
-	private final JTable patientsTable;
-	private final ButtonsActionsBar buttonsActionsBar;
+  private final PatientController patientController;
+  private final FacilityController facilityController;
 
-	public PatientsPanel(PatientController patientController) {
-		this.patientController = Objects.requireNonNull(patientController, "patientController");
+  private final PatientsTableModel patientsTableModel;
+  private final JTable patientsTable;
+  private final ButtonsActionsBar buttonsActionsBar;
 
-		setLayout(new BorderLayout(10, 10));
-		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+  public PatientsPanel(PatientController patientController, FacilityController facilityController) {
+    this.patientController = Objects.requireNonNull(patientController, "patientController");
+    this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
 
-		patientsTableModel = new PatientsTableModel();
-		patientsTable = new JTable(patientsTableModel);
-		patientsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    setLayout(new BorderLayout(10, 10));
+    setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
-			@Override
-			public void onAdd() {
-				openAddPatientDialog();
-			}
+    patientsTableModel = new PatientsTableModel();
+    patientsTable = new JTable(patientsTableModel);
+    patientsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-			@Override
-			public void onEdit() {
-				openEditPatientDialog();
-			}
+    buttonsActionsBar = new ButtonsActionsBar(new ButtonsActionsBar.Actions() {
+      @Override
+      public void onAdd() {
+        openAddPatientDialog();
+      }
 
-			@Override
-			public void onRefresh() {
-				refreshPatientsTable();
-			}
-		});
+      @Override
+      public void onEdit() {
+        openEditPatientDialog();
+      }
 
-		buttonsActionsBar.setEditEnabled(false);
+      @Override
+      public void onRefresh() {
+        refreshPatientsTable();
+      }
+    });
 
-		patientsTable.getSelectionModel().addListSelectionListener(event -> {
-			if (event.getValueIsAdjusting()) {
-				return;
-			}
-			boolean hasSelection = patientsTable.getSelectedRow() >= 0;
-			buttonsActionsBar.setEditEnabled(hasSelection);
-		});
+    buttonsActionsBar.setEditEnabled(false);
 
-		add(buttonsActionsBar, BorderLayout.NORTH);
-		add(new JScrollPane(patientsTable), BorderLayout.CENTER);
+    patientsTable.getSelectionModel().addListSelectionListener(event -> {
+      if (event.getValueIsAdjusting()) {
+        return;
+      }
+      boolean hasSelection = patientsTable.getSelectedRow() >= 0;
+      buttonsActionsBar.setEditEnabled(hasSelection);
+    });
 
-		refreshPatientsTable();
-	}
+    add(buttonsActionsBar, BorderLayout.NORTH);
+    add(new JScrollPane(patientsTable), BorderLayout.CENTER);
 
-	private void refreshPatientsTable() {
-		try {
-			List<Patient> patients = patientController.getAllPatients();
-			patientsTableModel.setPatients(patients);
-			buttonsActionsBar.setEditEnabled(patientsTable.getSelectedRow() >= 0);
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+    refreshPatientsTable();
+  }
 
-	private void openAddPatientDialog() {
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+  private void refreshPatientsTable() {
+    try {
+      List<Patient> patients = patientController.getAllPatients();
+      Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
+      patientsTableModel.setPatients(patients, facilityNamesByFacilityId);
+      buttonsActionsBar.setEditEnabled(patientsTable.getSelectedRow() >= 0);
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
-					FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.optionalEditable("nhsNumber", "NHS Number"),
-					FormFieldViewConfiguration.optionalEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("address", "Address"),
-					FormFieldViewConfiguration.optionalEditable("gpSurgeryId", "GP Surgery ID"));
+  private void openAddPatientDialog() {
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			FormDialog formDialog = new FormDialog(owner, "Add Patient", fieldViewConfigurations, Map.of());
-			formDialog.setVisible(true);
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
+          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
+          FormFieldViewConfiguration.requiredEditable("address", "Address"),
+          FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
+      );
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      FormDialog formDialog = new FormDialog(owner, "Add Patient", fieldViewConfigurations, Map.of());
+      formDialog.setVisible(true);
 
-			Patient patient = new Patient(valuesByKey.getOrDefault("patientId", ""),
-					valuesByKey.getOrDefault("fullName", ""), valuesByKey.getOrDefault("email", ""),
-					valuesByKey.getOrDefault("nhsNumber", ""), valuesByKey.getOrDefault("phoneNumber", ""),
-					valuesByKey.getOrDefault("address", ""), valuesByKey.getOrDefault("gpSurgeryId", ""));
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-			patientController.addPatient(patient);
-			refreshPatientsTable();
-			selectPatientById(patient.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-	private void openEditPatientDialog() {
-		int selectedRowIndex = patientsTable.getSelectedRow();
-		if (selectedRowIndex < 0) {
-			JOptionPane.showMessageDialog(this, "Select a patient to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      Patient patient = new Patient(
+          valuesByKey.getOrDefault("patientId", ""),
+          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("nhsNumber", ""),
+          valuesByKey.getOrDefault("phone", ""),
+          valuesByKey.getOrDefault("address", ""),
+          valuesByKey.getOrDefault("registeredFacilityId", "")
+      );
 
-		Patient selectedPatient = patientsTableModel.getPatientAtRow(selectedRowIndex);
-		if (selectedPatient == null) {
-			JOptionPane.showMessageDialog(this, "Select a patient to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
-			return;
-		}
+      patientController.addPatient(patient);
+      refreshPatientsTable();
+      selectPatientById(patient.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 
-		try {
-			Window owner = SwingUtilities.getWindowAncestor(this);
+  private void openEditPatientDialog() {
+    int selectedRowIndex = patientsTable.getSelectedRow();
+    if (selectedRowIndex < 0) {
+      JOptionPane.showMessageDialog(this, "Select a patient to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
-					FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
-					FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-					FormFieldViewConfiguration.optionalEditable("email", "Email"),
-					FormFieldViewConfiguration.optionalEditable("nhsNumber", "NHS Number"),
-					FormFieldViewConfiguration.optionalEditable("phoneNumber", "Phone Number"),
-					FormFieldViewConfiguration.optionalEditable("address", "Address"),
-					FormFieldViewConfiguration.optionalEditable("gpSurgeryId", "GP Surgery ID"));
+    Patient selectedPatient = patientsTableModel.getPatientAtRow(selectedRowIndex);
+    if (selectedPatient == null) {
+      JOptionPane.showMessageDialog(this, "Select a patient to edit.", "Edit", JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
 
-			Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-			defaultValuesByKey.put("patientId", selectedPatient.getId());
-			defaultValuesByKey.put("fullName", selectedPatient.getFullName());
-			defaultValuesByKey.put("email", selectedPatient.getEmail());
-			defaultValuesByKey.put("nhsNumber", selectedPatient.getNhsNumber());
-			defaultValuesByKey.put("phoneNumber", selectedPatient.getPhone());
-			defaultValuesByKey.put("address", selectedPatient.getAddress());
-			defaultValuesByKey.put("gpSurgeryId", selectedPatient.getRegisteredFacilityId());
+    try {
+      Window owner = SwingUtilities.getWindowAncestor(this);
 
-			FormDialog formDialog = new FormDialog(owner, "Edit Patient", fieldViewConfigurations, defaultValuesByKey);
-			formDialog.setVisible(true);
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
 
-			if (!formDialog.isConfirmed()) {
-				return;
-			}
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
+          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
+          FormFieldViewConfiguration.requiredEditable("address", "Address"),
+          FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
+      );
 
-			Map<String, String> valuesByKey = formDialog.getValuesByKey();
+      Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
+      defaultValuesByKey.put("patientId", selectedPatient.getId());
+      defaultValuesByKey.put("fullName", selectedPatient.getFullName());
+      defaultValuesByKey.put("email", selectedPatient.getEmail());
+      defaultValuesByKey.put("nhsNumber", selectedPatient.getNhsNumber());
+      defaultValuesByKey.put("phone", selectedPatient.getPhone());
+      defaultValuesByKey.put("address", selectedPatient.getAddress());
+      defaultValuesByKey.put("registeredFacilityId", selectedPatient.getRegisteredFacilityId());
 
-			Patient updatedPatient = new Patient(selectedPatient.getId(), valuesByKey.getOrDefault("fullName", ""),
-					valuesByKey.getOrDefault("email", ""), valuesByKey.getOrDefault("nhsNumber", ""),
-					valuesByKey.getOrDefault("phoneNumber", ""), valuesByKey.getOrDefault("address", ""),
-					valuesByKey.getOrDefault("gpSurgeryId", ""));
+      FormDialog formDialog = new FormDialog(owner, "Edit Patient", fieldViewConfigurations, defaultValuesByKey);
+      formDialog.setVisible(true);
 
-			patientController.updatePatient(updatedPatient);
-			refreshPatientsTable();
-			selectPatientById(updatedPatient.getId());
-		} catch (RuntimeException exception) {
-			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+      if (!formDialog.isConfirmed()) {
+        return;
+      }
 
-	private void selectPatientById(String patientId) {
-		if (patientId == null || patientId.trim().isEmpty()) {
-			return;
-		}
+      Map<String, String> valuesByKey = formDialog.getValuesByKey();
 
-		for (int rowIndex = 0; rowIndex < patientsTableModel.getRowCount(); rowIndex++) {
-			Patient patient = patientsTableModel.getPatientAtRow(rowIndex);
-			if (patient != null && patientId.equals(patient.getId())) {
-				patientsTable.setRowSelectionInterval(rowIndex, rowIndex);
-				patientsTable.scrollRectToVisible(patientsTable.getCellRect(rowIndex, 0, true));
-				return;
-			}
-		}
-	}
+      Patient updatedPatient = new Patient(
+          selectedPatient.getId(),
+          valuesByKey.getOrDefault("fullName", ""),
+          valuesByKey.getOrDefault("email", ""),
+          valuesByKey.getOrDefault("nhsNumber", ""),
+          valuesByKey.getOrDefault("phone", ""),
+          valuesByKey.getOrDefault("address", ""),
+          valuesByKey.getOrDefault("registeredFacilityId", "")
+      );
+
+      patientController.updatePatient(updatedPatient);
+      refreshPatientsTable();
+      selectPatientById(updatedPatient.getId());
+    } catch (RuntimeException exception) {
+      JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String facilityId = safe(facility.getId());
+      if (facilityId.isEmpty()) {
+        continue;
+      }
+      facilityNamesByFacilityId.put(facilityId, safe(facility.getName()));
+    }
+    return facilityNamesByFacilityId;
+  }
+
+  private List<SelectionItem> buildFacilitySelectionItems() {
+    List<Facility> facilities = facilityController.getAllFacilities();
+    List<SelectionItem> items = new java.util.ArrayList<>();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String facilityId = safe(facility.getId());
+      if (facilityId.isEmpty()) {
+        continue;
+      }
+      String facilityName = safe(facility.getName());
+      String label = facilityName.isEmpty() ? ("Facility ID: " + facilityId) : (facilityName + " (ID: " + facilityId + ")");
+      items.add(new SelectionItem(facilityId, label));
+    }
+    return items;
+  }
+
+  private void selectPatientById(String patientId) {
+    if (patientId == null || patientId.trim().isEmpty()) {
+      return;
+    }
+
+    for (int rowIndex = 0; rowIndex < patientsTableModel.getRowCount(); rowIndex++) {
+      Patient patient = patientsTableModel.getPatientAtRow(rowIndex);
+      if (patient != null && patientId.equals(patient.getId())) {
+        patientsTable.setRowSelectionInterval(rowIndex, rowIndex);
+        patientsTable.scrollRectToVisible(patientsTable.getCellRect(rowIndex, 0, true));
+        return;
+      }
+    }
+  }
+
+  private String safe(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.trim();
+  }
 }
