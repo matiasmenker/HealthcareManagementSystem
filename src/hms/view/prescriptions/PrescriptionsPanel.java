@@ -139,6 +139,13 @@ public class PrescriptionsPanel extends JPanel {
       selectPrescriptionById(prescription.getId());
 
       logToApplicationConsole("Generated " + outputFilePath);
+
+      JOptionPane.showMessageDialog(
+          this,
+          "Simulate email notification: Prescription created and output file generated:\n" + outputFilePath,
+          "Prescription created",
+          JOptionPane.INFORMATION_MESSAGE
+      );
     } catch (RuntimeException exception) {
       logToApplicationConsole("Failed creating prescription: " + safe(exception.getMessage()));
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

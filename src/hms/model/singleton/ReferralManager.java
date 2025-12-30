@@ -10,7 +10,6 @@ import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
 import hms.repository.ReferralRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,8 +23,6 @@ public class ReferralManager {
   private final FacilityRepository facilityRepository;
   private final ReferralProcessingOutputWriter referralProcessingOutputWriter;
 
-  private final List<Referral> referralQueue = new ArrayList<>();
-
   private ReferralManager(ReferralRepository referralRepository,
                           PatientRepository patientRepository,
                           ClinicianRepository clinicianRepository,
@@ -38,93 +35,103 @@ public class ReferralManager {
     this.referralProcessingOutputWriter = Objects.requireNonNull(referralProcessingOutputWriter, "referralProcessingOutputWriter");
   }
 
-  public static ReferralManager getInstance(ReferralRepository referralRepository,
-                                            PatientRepository patientRepository,
-                                            ClinicianRepository clinicianRepository,
-                                            FacilityRepository facilityRepository,
-                                            ReferralProcessingOutputWriter referralProcessingOutputWriter) {
+  public static synchronized ReferralManager getInstance(ReferralRepository referralRepository,
+                                                        PatientRepository patientRepository,
+                                                        ClinicianRepository clinicianRepository,
+                                                        FacilityRepository facilityRepository,
+                                                        ReferralProcessingOutputWriter referralProcessingOutputWriter) {
     if (instance == null) {
-      instance = new ReferralManager(referralRepository, patientRepository, clinicianRepository, facilityRepository, referralProcessingOutputWriter);
+      instance = new ReferralManager(
+          referralRepository,
+          patientRepository,
+          clinicianRepository,
+          facilityRepository,
+          referralProcessingOutputWriter
+      );
     }
     return instance;
   }
 
-  public static ReferralManager getInstance() {
+  public static synchronized ReferralManager getInstance() {
     if (instance == null) {
-      throw new IllegalStateException("ReferralManager is not initialised");
+      throw new IllegalStateException("ReferralManager is not initialized. Initialize it in Main before using it.");
     }
     return instance;
   }
 
-  public void createReferral(Referral referral) {
-    Objects.requireNonNull(referral, "referral");
+  public ReferralProcessingResult createReferral(Referral referral) {
+    if (referral == null) {
+      throw new IllegalArgumentException("Referral is required");
+    }
+
+    Patient patient = findPatientById(referral.getPatientId());
+    if (patient == null) {
+      throw new IllegalArgumentException("Patient not found: " + safe(referral.getPatientId()));
+    }
+
+    Clinician fromClinician = clinicianRepository.findById(referral.getFromClinicianId());
+    if (fromClinician == null) {
+      throw new IllegalArgumentException("From Clinician not found: " + safe(referral.getFromClinicianId()));
+    }
+
+    Clinician toClinician = clinicianRepository.findById(referral.getToClinicianId());
+    if (toClinician == null) {
+      throw new IllegalArgumentException("To Clinician not found: " + safe(referral.getToClinicianId()));
+    }
+
+    Facility fromFacility = facilityRepository.findById(referral.getFromFacilityId());
+    if (fromFacility == null) {
+      throw new IllegalArgumentException("From Facility not found: " + safe(referral.getFromFacilityId()));
+    }
+
+    Facility toFacility = facilityRepository.findById(referral.getToFacilityId());
+    if (toFacility == null) {
+      throw new IllegalArgumentException("To Facility not found: " + safe(referral.getToFacilityId()));
+    }
 
     referralRepository.add(referral);
-    referralQueue.add(referral);
 
-    Patient patient = patientRepository.findById(referral.getPatientId());
-    Clinician fromClinician = clinicianRepository.findById(referral.getReferringClinicianId());
-    Clinician toClinician = clinicianRepository.findById(referral.getReferredToClinicianId());
-    Facility fromFacility = facilityRepository.findById(referral.getReferringFacilityId());
-    Facility toFacility = facilityRepository.findById(referral.getReferredToFacilityId());
-
-    String patientName = patient == null ? "" : safe(patient.getFullName());
-    String fromClinicianName = fromClinician == null ? "" : safe(fromClinician.getFullName());
-    String toClinicianName = toClinician == null ? "" : safe(toClinician.getFullName());
-    String fromFacilityName = fromFacility == null ? "" : safe(fromFacility.getName());
-    String toFacilityName = toFacility == null ? "" : safe(toFacility.getName());
-
-    referralProcessingOutputWriter.writeReferralFile(
+    String referralTextFilePath = referralProcessingOutputWriter.writeReferralTextFile(
         referral,
-        patientName,
-        fromClinicianName,
-        toClinicianName,
-        fromFacilityName,
-        toFacilityName
+        patient,
+        fromClinician,
+        toClinician,
+        fromFacility,
+        toFacility
     );
 
-    String emailContent = buildReferralEmailContent(referral, patientName, fromClinician, toClinician, fromFacility, toFacility);
-    referralProcessingOutputWriter.appendReferralEmailLog(emailContent);
+    String referralEmailsLogPath = referralProcessingOutputWriter.appendReferralEmailLog(
+        referral,
+        patient,
+        fromClinician,
+        toClinician
+    );
 
-    String ehrUpdateContent = buildEhrUpdateContent(referral, patientName, fromClinicianName, toClinicianName);
-    referralProcessingOutputWriter.appendEhrUpdatesLog(ehrUpdateContent);
+    String electronicHealthRecordUpdatesLogPath = referralProcessingOutputWriter.appendElectronicHealthRecordUpdatesLog(
+        referral,
+        patient
+    );
+
+    return new ReferralProcessingResult(referralTextFilePath, referralEmailsLogPath, electronicHealthRecordUpdatesLogPath);
   }
 
-  public List<Referral> getReferralQueueSnapshot() {
-    return new ArrayList<>(referralQueue);
-  }
+  private Patient findPatientById(String patientId) {
+    String normalizedPatientId = safe(patientId);
+    if (normalizedPatientId.isEmpty()) {
+      return null;
+    }
 
-  private String buildReferralEmailContent(Referral referral,
-                                          String patientName,
-                                          Clinician fromClinician,
-                                          Clinician toClinician,
-                                          Facility fromFacility,
-                                          Facility toFacility) {
-    String fromClinicianEmail = fromClinician == null ? "" : safe(fromClinician.getEmail());
-    String toClinicianEmail = toClinician == null ? "" : safe(toClinician.getEmail());
+    List<Patient> patients = patientRepository.findAll();
+    for (Patient patient : patients) {
+      if (patient == null) {
+        continue;
+      }
+      if (normalizedPatientId.equals(safe(patient.getId()))) {
+        return patient;
+      }
+    }
 
-    String fromFacilityName = fromFacility == null ? "" : safe(fromFacility.getName());
-    String toFacilityName = toFacility == null ? "" : safe(toFacility.getName());
-
-    return "Referral Email | Referral ID: " + safe(referral.getId())
-        + " | To: " + toClinicianEmail
-        + " | From: " + fromClinicianEmail
-        + " | Patient: " + safe(patientName)
-        + " | Urgency: " + safe(referral.getUrgencyLevel())
-        + " | From Facility: " + fromFacilityName
-        + " | To Facility: " + toFacilityName
-        + " | Reason: " + safe(referral.getReferralReason());
-  }
-
-  private String buildEhrUpdateContent(Referral referral,
-                                       String patientName,
-                                       String fromClinicianName,
-                                       String toClinicianName) {
-    return "EHR Update | Referral ID: " + safe(referral.getId())
-        + " | Patient: " + safe(patientName)
-        + " | From Clinician: " + safe(fromClinicianName)
-        + " | To Clinician: " + safe(toClinicianName)
-        + " | Status: " + (referral.getStatus() == null ? "" : referral.getStatus().name());
+    return null;
   }
 
   private String safe(String value) {

@@ -24,8 +24,7 @@ public class ReferralsTableModel extends AbstractTableModel {
       "To Facility Name",
       "Urgency",
       "Status",
-      "Referral Date",
-      "Reason"
+      "Date Created"
   };
 
   private List<Referral> referrals = new ArrayList<>();
@@ -83,40 +82,37 @@ public class ReferralsTableModel extends AbstractTableModel {
       return patientNamesByPatientId.getOrDefault(safe(referral.getPatientId()), "");
     }
     if (columnIndex == 3) {
-      return referral.getReferringClinicianId();
+      return referral.getFromClinicianId();
     }
     if (columnIndex == 4) {
-      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getReferringClinicianId()), "");
+      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getFromClinicianId()), "");
     }
     if (columnIndex == 5) {
-      return referral.getReferredToClinicianId();
+      return referral.getToClinicianId();
     }
     if (columnIndex == 6) {
-      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getReferredToClinicianId()), "");
+      return clinicianNamesByClinicianId.getOrDefault(safe(referral.getToClinicianId()), "");
     }
     if (columnIndex == 7) {
-      return referral.getReferringFacilityId();
+      return referral.getFromFacilityId();
     }
     if (columnIndex == 8) {
-      return facilityNamesByFacilityId.getOrDefault(safe(referral.getReferringFacilityId()), "");
+      return facilityNamesByFacilityId.getOrDefault(safe(referral.getFromFacilityId()), "");
     }
     if (columnIndex == 9) {
-      return referral.getReferredToFacilityId();
+      return referral.getToFacilityId();
     }
     if (columnIndex == 10) {
-      return facilityNamesByFacilityId.getOrDefault(safe(referral.getReferredToFacilityId()), "");
+      return facilityNamesByFacilityId.getOrDefault(safe(referral.getToFacilityId()), "");
     }
     if (columnIndex == 11) {
-      return referral.getUrgencyLevel();
+      return referral.getUrgency();
     }
     if (columnIndex == 12) {
-      return referral.getStatus() == null ? "" : referral.getStatus().name();
+      return referral.getStatus();
     }
     if (columnIndex == 13) {
-      return referral.getReferralDate();
-    }
-    if (columnIndex == 14) {
-      return referral.getReferralReason();
+      return referral.getDateCreated();
     }
 
     return "";
