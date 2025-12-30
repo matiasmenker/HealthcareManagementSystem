@@ -4,11 +4,14 @@ import hms.controller.AppointmentController;
 import hms.controller.ClinicianController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.controller.PrescriptionController;
 import hms.controller.StaffController;
+import hms.output.PrescriptionOutputFileGenerator;
 import hms.repository.AppointmentRepository;
 import hms.repository.ClinicianRepository;
 import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
+import hms.repository.PrescriptionRepository;
 import hms.repository.StaffRepository;
 import hms.util.CsvFileReader;
 import hms.view.MainFrame;
@@ -26,7 +29,9 @@ public class Main {
 			MainFrame mainFrame = null;
 
 			try {
-				Path dataDirectory = Path.of(System.getProperty("user.dir")).resolve("data");
+				Path projectDirectory = Path.of(System.getProperty("user.dir"));
+				Path dataDirectory = projectDirectory.resolve("data");
+				Path outputDirectory = projectDirectory.resolve("output");
 
 				PatientRepository patientRepository = new PatientRepository();
 				patientRepository.load(dataDirectory.resolve("patients.csv").toString());
@@ -43,6 +48,9 @@ public class Main {
 				StaffRepository staffRepository = new StaffRepository();
 				staffRepository.load(dataDirectory.resolve("staff.csv").toString());
 
+				PrescriptionRepository prescriptionRepository = new PrescriptionRepository();
+				prescriptionRepository.load(dataDirectory.resolve("prescriptions.csv").toString());
+
 				PatientController patientController = new PatientController(patientRepository);
 				ClinicianController clinicianController = new ClinicianController(clinicianRepository);
 				AppointmentController appointmentController = new AppointmentController(appointmentRepository,
@@ -50,14 +58,19 @@ public class Main {
 				FacilityController facilityController = new FacilityController(facilityRepository);
 				StaffController staffController = new StaffController(staffRepository);
 
+				PrescriptionOutputFileGenerator prescriptionOutputFileGenerator = new PrescriptionOutputFileGenerator(
+						outputDirectory);
+				PrescriptionController prescriptionController = new PrescriptionController(prescriptionRepository,
+						patientRepository, clinicianRepository, prescriptionOutputFileGenerator);
+
 				mainFrame = new MainFrame(patientController, clinicianController, appointmentController,
-						facilityController, staffController);
+						facilityController, staffController, prescriptionController);
 				mainFrame.setVisible(true);
 
 				Map<String, Integer> recordCountsByLabel = loadAllCsvRecordCounts(dataDirectory,
 						patientRepository.findAll().size(), clinicianRepository.findAll().size(),
 						appointmentRepository.findAll().size(), facilityRepository.findAll().size(),
-						staffRepository.findAll().size());
+						staffRepository.findAll().size(), prescriptionRepository.findAll().size());
 
 				mainFrame.setStatusText(buildStatusText(recordCountsByLabel));
 			} catch (RuntimeException exception) {
@@ -72,9 +85,8 @@ public class Main {
 	}
 
 	private static Map<String, Integer> loadAllCsvRecordCounts(Path dataDirectory, int patientsCount,
-			int cliniciansCount, int appointmentsCount, int facilitiesCount, int staffCount) {
+			int cliniciansCount, int appointmentsCount, int facilitiesCount, int staffCount, int prescriptionsCount) {
 		Map<String, String> labelsByFileName = new LinkedHashMap<>();
-		labelsByFileName.put("prescriptions", "prescriptions.csv");
 		labelsByFileName.put("referrals", "referrals.csv");
 
 		Map<String, Integer> countsByLabel = new LinkedHashMap<>();
@@ -83,6 +95,7 @@ public class Main {
 		countsByLabel.put("appointments", appointmentsCount);
 		countsByLabel.put("facilities", facilitiesCount);
 		countsByLabel.put("staff", staffCount);
+		countsByLabel.put("prescriptions", prescriptionsCount);
 
 		for (Map.Entry<String, String> entry : labelsByFileName.entrySet()) {
 			String label = entry.getKey();

@@ -4,11 +4,13 @@ import hms.controller.AppointmentController;
 import hms.controller.ClinicianController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.controller.PrescriptionController;
 import hms.controller.StaffController;
 import hms.view.appointments.AppointmentsPanel;
 import hms.view.clinicians.CliniciansPanel;
 import hms.view.facilities.FacilitiesPanel;
 import hms.view.patients.PatientsPanel;
+import hms.view.prescriptions.PrescriptionsPanel;
 import hms.view.staff.StaffPanel;
 
 import javax.swing.JFrame;
@@ -24,12 +26,13 @@ public class MainFrame extends JFrame {
 
 	public MainFrame(PatientController patientController, ClinicianController clinicianController,
 			AppointmentController appointmentController, FacilityController facilityController,
-			StaffController staffController) {
+			StaffController staffController, PrescriptionController prescriptionController) {
 		Objects.requireNonNull(patientController, "patientController");
 		Objects.requireNonNull(clinicianController, "clinicianController");
 		Objects.requireNonNull(appointmentController, "appointmentController");
 		Objects.requireNonNull(facilityController, "facilityController");
 		Objects.requireNonNull(staffController, "staffController");
+		Objects.requireNonNull(prescriptionController, "prescriptionController");
 
 		setTitle("Healthcare Management System");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -43,7 +46,8 @@ public class MainFrame extends JFrame {
 		tabbedPane.addTab("Patients", new PatientsPanel(patientController));
 		tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController));
 		tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController));
-		tabbedPane.addTab("Prescriptions", new JLabel("Prescriptions screen not implemented yet"));
+		tabbedPane.addTab("Prescriptions",
+				new PrescriptionsPanel(prescriptionController, patientController, clinicianController));
 		tabbedPane.addTab("Referrals", new JLabel("Referrals screen not implemented yet"));
 		tabbedPane.addTab("Facilities", new FacilitiesPanel(facilityController));
 		tabbedPane.addTab("Staff", new StaffPanel(staffController));
