@@ -4,6 +4,7 @@ import hms.controller.FacilityController;
 import hms.controller.PatientController;
 import hms.model.Facility;
 import hms.model.Patient;
+import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -82,6 +83,7 @@ public class PatientsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       patientsTableModel.setPatients(patients, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(patientsTable.getSelectedRow() >= 0);
+      ActionFeedbackNotifier.showInformation(this, "Patients list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -124,6 +126,7 @@ public class PatientsPanel extends JPanel {
       patientController.addPatient(patient);
       refreshPatientsTable();
       selectPatientById(patient.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Patient created: " + safe(patient.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -186,6 +189,7 @@ public class PatientsPanel extends JPanel {
       patientController.updatePatient(updatedPatient);
       refreshPatientsTable();
       selectPatientById(updatedPatient.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Patient updated: " + safe(updatedPatient.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

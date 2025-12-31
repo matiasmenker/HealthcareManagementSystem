@@ -9,6 +9,7 @@ import hms.model.Clinician;
 import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.enums.AppointmentStatus;
+import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -96,6 +97,7 @@ public class AppointmentsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       appointmentsTableModel.setAppointments(appointments, patientNamesByPatientId, clinicianNamesByClinicianId, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(appointmentsTable.getSelectedRow() >= 0);
+      ActionFeedbackNotifier.showInformation(this, "Appointments list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -142,6 +144,7 @@ public class AppointmentsPanel extends JPanel {
       appointmentController.addAppointment(appointment);
       refreshAppointmentsTable();
       selectAppointmentById(appointment.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Appointment created: " + safe(appointment.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -179,13 +182,13 @@ public class AppointmentsPanel extends JPanel {
       );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
-      defaultValuesByKey.put("appointmentId", safe(selectedAppointment.getId()));
-      defaultValuesByKey.put("patientId", safe(selectedAppointment.getPatientId()));
-      defaultValuesByKey.put("clinicianId", safe(selectedAppointment.getClinicianId()));
-      defaultValuesByKey.put("facilityId", safe(selectedAppointment.getFacilityId()));
-      defaultValuesByKey.put("dateTime", safe(selectedAppointment.getDateTime()));
+      defaultValuesByKey.put("appointmentId", selectedAppointment.getId());
+      defaultValuesByKey.put("patientId", selectedAppointment.getPatientId());
+      defaultValuesByKey.put("clinicianId", selectedAppointment.getClinicianId());
+      defaultValuesByKey.put("facilityId", selectedAppointment.getFacilityId());
+      defaultValuesByKey.put("dateTime", selectedAppointment.getDateTime());
       defaultValuesByKey.put("status", selectedAppointment.getStatus() == null ? "" : selectedAppointment.getStatus().name());
-      defaultValuesByKey.put("reason", safe(selectedAppointment.getReason()));
+      defaultValuesByKey.put("reason", selectedAppointment.getReason());
 
       FormDialog formDialog = new FormDialog(owner, "Edit Appointment", fieldViewConfigurations, defaultValuesByKey);
       formDialog.setVisible(true);
@@ -209,6 +212,7 @@ public class AppointmentsPanel extends JPanel {
       appointmentController.updateAppointment(updatedAppointment);
       refreshAppointmentsTable();
       selectAppointmentById(updatedAppointment.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Appointment updated: " + safe(updatedAppointment.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -221,9 +225,6 @@ public class AppointmentsPanel extends JPanel {
     String normalized = rawStatus.trim().toUpperCase();
     if (normalized.isEmpty()) {
       return AppointmentStatus.SCHEDULED;
-    }
-    if (normalized.equals("CANCELED")) {
-      normalized = "CANCELLED";
     }
     try {
       return AppointmentStatus.valueOf(normalized);
@@ -244,7 +245,7 @@ public class AppointmentsPanel extends JPanel {
         continue;
       }
       String name = safe(patient.getFullName());
-      String label = name.isEmpty() ? ("Patient " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Patient ID: " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
@@ -262,7 +263,7 @@ public class AppointmentsPanel extends JPanel {
         continue;
       }
       String name = safe(clinician.getFullName());
-      String label = name.isEmpty() ? ("Clinician " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Clinician ID: " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
@@ -280,7 +281,7 @@ public class AppointmentsPanel extends JPanel {
         continue;
       }
       String name = safe(facility.getName());
-      String label = name.isEmpty() ? ("Facility " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;

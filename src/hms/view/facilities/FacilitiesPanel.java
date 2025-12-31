@@ -2,6 +2,7 @@ package hms.view.facilities;
 
 import hms.controller.FacilityController;
 import hms.model.Facility;
+import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -80,6 +81,7 @@ public class FacilitiesPanel extends JPanel {
       List<Facility> facilities = facilityController.getAllFacilities();
       facilitiesTableModel.setFacilities(facilities);
       buttonsActionsBar.setEditEnabled(facilitiesTable.getSelectedRow() >= 0);
+      ActionFeedbackNotifier.showInformation(this, "Facilities list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -129,6 +131,7 @@ public class FacilitiesPanel extends JPanel {
       facilityController.addFacility(facility);
       refreshFacilitiesTable();
       selectFacilityById(facility.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Facility created: " + safe(facility.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -203,6 +206,7 @@ public class FacilitiesPanel extends JPanel {
       facilityController.updateFacility(updatedFacility);
       refreshFacilitiesTable();
       selectFacilityById(updatedFacility.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Facility updated: " + safe(updatedFacility.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

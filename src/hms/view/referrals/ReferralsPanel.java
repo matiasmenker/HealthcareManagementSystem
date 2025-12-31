@@ -9,6 +9,7 @@ import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.Referral;
 import hms.model.enums.ReferralStatus;
+import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -96,6 +97,7 @@ public class ReferralsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       referralsTableModel.setReferrals(referrals, patientNamesByPatientId, clinicianNamesByClinicianId, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(referralsTable.getSelectedRow() >= 0);
+      ActionFeedbackNotifier.showInformation(this, "Referrals list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -158,6 +160,7 @@ public class ReferralsPanel extends JPanel {
       referralController.addReferral(referral);
       refreshReferralsTable();
       selectReferralById(referral.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Referral created: " + safe(referral.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -246,6 +249,7 @@ public class ReferralsPanel extends JPanel {
       referralController.updateReferral(updatedReferral);
       refreshReferralsTable();
       selectReferralById(updatedReferral.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Referral updated: " + safe(updatedReferral.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

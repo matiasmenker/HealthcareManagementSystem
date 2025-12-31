@@ -4,6 +4,7 @@ import hms.controller.FacilityController;
 import hms.controller.StaffController;
 import hms.model.Facility;
 import hms.model.Staff;
+import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
 import hms.view.common.FormFieldViewConfiguration;
@@ -82,6 +83,7 @@ public class StaffPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       staffTableModel.setStaffMembers(staffMembers, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(staffTable.getSelectedRow() >= 0);
+      ActionFeedbackNotifier.showInformation(this, "Staff list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -137,6 +139,7 @@ public class StaffPanel extends JPanel {
       staffController.addStaff(staff);
       refreshStaffTable();
       selectStaffById(staff.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Staff member created: " + safe(staff.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -195,6 +198,7 @@ public class StaffPanel extends JPanel {
       staffController.updateStaff(updatedStaff);
       refreshStaffTable();
       selectStaffById(updatedStaff.getId());
+      ActionFeedbackNotifier.showSuccess(this, "Staff member updated: " + safe(updatedStaff.getId()));
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
