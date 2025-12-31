@@ -43,12 +43,18 @@ public class ReferralManager {
                                                         FacilityRepository facilityRepository,
                                                         ReferralProcessingOutputWriter referralProcessingOutputWriter) {
     if (instance == null) {
-      instance = new ReferralManager(referralRepository, patientRepository, clinicianRepository, facilityRepository, referralProcessingOutputWriter);
+      instance = new ReferralManager(
+          referralRepository,
+          patientRepository,
+          clinicianRepository,
+          facilityRepository,
+          referralProcessingOutputWriter
+      );
     }
     return instance;
   }
 
-  public void createReferral(Referral referral) {
+  public synchronized void createReferral(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
     Patient patient = patientRepository.findById(referral.getPatientId());
@@ -69,7 +75,7 @@ public class ReferralManager {
     referralProcessingOutputWriter.appendElectronicHealthRecordUpdateLog(referral, patient);
   }
 
-  public void updateReferral(Referral referral) {
+  public synchronized void updateReferral(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
     Patient patient = patientRepository.findById(referral.getPatientId());

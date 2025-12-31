@@ -7,65 +7,67 @@ import java.util.Objects;
 
 public class ButtonsActionsBar extends JPanel {
 
-  public interface Actions {
-    void onAdd();
-    void onEdit();
-    void onRefresh();
-  }
+	public interface Actions {
+		void onAdd();
 
-  private final JButton addButton;
-  private final JButton editButton;
-  private final JButton deleteButton;
-  private final JButton refreshButton;
+		void onEdit();
 
-  private Runnable deleteHandler;
+		void onRefresh();
+	}
 
-  public ButtonsActionsBar(Actions actions) {
-    Objects.requireNonNull(actions, "actions");
+	private final JButton addButton;
+	private final JButton editButton;
+	private final JButton deleteButton;
+	private final JButton refreshButton;
 
-    setLayout(new FlowLayout(FlowLayout.LEFT, 8, 0));
+	private Runnable deleteHandler;
 
-    addButton = new JButton("Add");
-    editButton = new JButton("Edit");
-    deleteButton = new JButton("Delete");
-    refreshButton = new JButton("Refresh");
+	public ButtonsActionsBar(Actions actions) {
+		Objects.requireNonNull(actions, "actions");
 
-    add(addButton);
-    add(editButton);
-    add(deleteButton);
-    add(refreshButton);
+		setLayout(new FlowLayout(FlowLayout.LEFT, 8, 0));
 
-    addButton.addActionListener(event -> actions.onAdd());
-    editButton.addActionListener(event -> actions.onEdit());
-    refreshButton.addActionListener(event -> actions.onRefresh());
+		addButton = new JButton("Add");
+		editButton = new JButton("Edit");
+		deleteButton = new JButton("Delete");
+		refreshButton = new JButton("Refresh");
 
-    deleteButton.addActionListener(event -> {
-      if (deleteHandler != null) {
-        deleteHandler.run();
-      }
-    });
+		add(addButton);
+		add(editButton);
+		add(deleteButton);
+		add(refreshButton);
 
-    deleteButton.setVisible(false);
-    deleteButton.setEnabled(false);
-  }
+		addButton.addActionListener(event -> actions.onAdd());
+		editButton.addActionListener(event -> actions.onEdit());
+		refreshButton.addActionListener(event -> actions.onRefresh());
 
-  public void setEditEnabled(boolean enabled) {
-    editButton.setEnabled(enabled);
-  }
+		deleteButton.addActionListener(event -> {
+			if (deleteHandler != null) {
+				deleteHandler.run();
+			}
+		});
 
-  public void setDeleteEnabled(boolean enabled) {
-    if (!deleteButton.isVisible()) {
-      deleteButton.setEnabled(false);
-      return;
-    }
-    deleteButton.setEnabled(enabled);
-  }
+		deleteButton.setVisible(false);
+		deleteButton.setEnabled(false);
+	}
 
-  public void setDeleteHandler(Runnable deleteHandler) {
-    this.deleteHandler = deleteHandler;
-    deleteButton.setVisible(true);
-    deleteButton.setEnabled(true);
-    revalidate();
-    repaint();
-  }
+	public void setEditEnabled(boolean enabled) {
+		editButton.setEnabled(enabled);
+	}
+
+	public void setDeleteEnabled(boolean enabled) {
+		if (!deleteButton.isVisible()) {
+			deleteButton.setEnabled(false);
+			return;
+		}
+		deleteButton.setEnabled(enabled);
+	}
+
+	public void setDeleteHandler(Runnable deleteHandler) {
+		this.deleteHandler = deleteHandler;
+		deleteButton.setVisible(true);
+		deleteButton.setEnabled(true);
+		revalidate();
+		repaint();
+	}
 }
