@@ -97,7 +97,6 @@ public class ReferralsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       referralsTableModel.setReferrals(referrals, patientNamesByPatientId, clinicianNamesByClinicianId, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(referralsTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Referrals list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -160,7 +159,16 @@ public class ReferralsPanel extends JPanel {
       referralController.addReferral(referral);
       refreshReferralsTable();
       selectReferralById(referral.getId());
-      ActionFeedbackNotifier.showSuccess(this, "Referral created: " + safe(referral.getId()));
+
+      String referralId = safe(referral.getId());
+
+      ActionFeedbackNotifier.showSuccess(
+          this,
+          "Referral created: " + referralId
+              + " | Simulated EMAIL sent: output/email_referral_" + referralId + ".txt"
+              + " | Simulated EHR update: output/ehr_update_" + referralId + ".txt"
+              + " | Referral details: output/referral_" + referralId + ".txt"
+      );
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
@@ -249,7 +257,16 @@ public class ReferralsPanel extends JPanel {
       referralController.updateReferral(updatedReferral);
       refreshReferralsTable();
       selectReferralById(updatedReferral.getId());
-      ActionFeedbackNotifier.showSuccess(this, "Referral updated: " + safe(updatedReferral.getId()));
+
+      String referralId = safe(updatedReferral.getId());
+
+      ActionFeedbackNotifier.showSuccess(
+          this,
+          "Referral updated: " + referralId
+              + " | Simulated EMAIL sent: output/email_referral_" + referralId + ".txt"
+              + " | Simulated EHR update: output/ehr_update_" + referralId + ".txt"
+              + " | Referral details: output/referral_" + referralId + ".txt"
+      );
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

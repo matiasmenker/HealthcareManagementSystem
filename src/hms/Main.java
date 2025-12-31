@@ -83,13 +83,22 @@ public class Main {
             facilityRepository,
             referralProcessingOutputWriter
         );
+        
+        ReferralManager referralManager = ReferralManager.getInstance(
+        	    referralRepository,
+        	    patientRepository,
+        	    clinicianRepository,
+        	    facilityRepository,
+        	    referralProcessingOutputWriter
+        	);
 
         ReferralController referralController = new ReferralController(
-            referralRepository,
-            patientRepository,
-            clinicianRepository,
-            facilityRepository
-        );
+        	    referralManager,
+        	    referralRepository,
+        	    patientRepository,
+        	    clinicianRepository,
+        	    facilityRepository
+        	);
 
         mainFrame = new MainFrame(
             patientController,

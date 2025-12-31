@@ -4,6 +4,7 @@ import hms.model.Clinician;
 import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.Referral;
+import hms.model.singleton.ReferralManager;
 import hms.repository.ClinicianRepository;
 import hms.repository.FacilityRepository;
 import hms.repository.PatientRepository;
@@ -14,15 +15,18 @@ import java.util.Objects;
 
 public class ReferralController {
 
+  private final ReferralManager referralManager;
   private final ReferralRepository referralRepository;
   private final PatientRepository patientRepository;
   private final ClinicianRepository clinicianRepository;
   private final FacilityRepository facilityRepository;
 
-  public ReferralController(ReferralRepository referralRepository,
+  public ReferralController(ReferralManager referralManager,
+                            ReferralRepository referralRepository,
                             PatientRepository patientRepository,
                             ClinicianRepository clinicianRepository,
                             FacilityRepository facilityRepository) {
+    this.referralManager = Objects.requireNonNull(referralManager, "referralManager");
     this.referralRepository = Objects.requireNonNull(referralRepository, "referralRepository");
     this.patientRepository = Objects.requireNonNull(patientRepository, "patientRepository");
     this.clinicianRepository = Objects.requireNonNull(clinicianRepository, "clinicianRepository");
@@ -35,12 +39,12 @@ public class ReferralController {
 
   public void addReferral(Referral referral) {
     validateReferral(referral);
-    referralRepository.add(referral);
+    referralManager.createReferral(referral);
   }
 
   public void updateReferral(Referral referral) {
     validateReferral(referral);
-    referralRepository.update(referral);
+    referralManager.updateReferral(referral);
   }
 
   private void validateReferral(Referral referral) {

@@ -90,7 +90,6 @@ public class PrescriptionsPanel extends JPanel {
       Map<String, String> clinicianNamesByClinicianId = buildClinicianNamesByClinicianId();
       prescriptionsTableModel.setPrescriptions(prescriptions, patientNamesByPatientId, clinicianNamesByClinicianId);
       buttonsActionsBar.setEditEnabled(prescriptionsTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Prescriptions list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

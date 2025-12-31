@@ -83,7 +83,6 @@ public class PatientsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       patientsTableModel.setPatients(patients, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(patientsTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Patients list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

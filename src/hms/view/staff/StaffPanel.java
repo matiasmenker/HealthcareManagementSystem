@@ -83,7 +83,6 @@ public class StaffPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       staffTableModel.setStaffMembers(staffMembers, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(staffTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Staff list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

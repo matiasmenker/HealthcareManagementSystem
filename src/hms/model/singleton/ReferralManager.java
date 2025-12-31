@@ -1,7 +1,6 @@
 package hms.model.singleton;
 
 import hms.model.Clinician;
-import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.Referral;
 import hms.output.ReferralProcessingOutputWriter;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Objects;
 
 public class ReferralManager {
-
   private static ReferralManager instance;
 
   private final ReferralRepository referralRepository;
@@ -24,7 +22,7 @@ public class ReferralManager {
   private final FacilityRepository facilityRepository;
   private final ReferralProcessingOutputWriter referralProcessingOutputWriter;
 
-  private final List<Referral> processedReferrals = new ArrayList<>();
+  private final List<Referral> processedReferrals;
 
   private ReferralManager(ReferralRepository referralRepository,
                           PatientRepository patientRepository,
@@ -36,28 +34,16 @@ public class ReferralManager {
     this.clinicianRepository = Objects.requireNonNull(clinicianRepository, "clinicianRepository");
     this.facilityRepository = Objects.requireNonNull(facilityRepository, "facilityRepository");
     this.referralProcessingOutputWriter = Objects.requireNonNull(referralProcessingOutputWriter, "referralProcessingOutputWriter");
+    this.processedReferrals = new ArrayList<>();
   }
 
-  public static ReferralManager getInstance() {
+  public static synchronized ReferralManager getInstance(ReferralRepository referralRepository,
+                                                        PatientRepository patientRepository,
+                                                        ClinicianRepository clinicianRepository,
+                                                        FacilityRepository facilityRepository,
+                                                        ReferralProcessingOutputWriter referralProcessingOutputWriter) {
     if (instance == null) {
-      throw new IllegalStateException("ReferralManager has not been initialized");
-    }
-    return instance;
-  }
-
-  public static ReferralManager getInstance(ReferralRepository referralRepository,
-                                            PatientRepository patientRepository,
-                                            ClinicianRepository clinicianRepository,
-                                            FacilityRepository facilityRepository,
-                                            ReferralProcessingOutputWriter referralProcessingOutputWriter) {
-    if (instance == null) {
-      instance = new ReferralManager(
-          referralRepository,
-          patientRepository,
-          clinicianRepository,
-          facilityRepository,
-          referralProcessingOutputWriter
-      );
+      instance = new ReferralManager(referralRepository, patientRepository, clinicianRepository, facilityRepository, referralProcessingOutputWriter);
     }
     return instance;
   }
@@ -65,34 +51,42 @@ public class ReferralManager {
   public void createReferral(Referral referral) {
     Objects.requireNonNull(referral, "referral");
 
+    Patient patient = patientRepository.findById(referral.getPatientId());
+    if (patient == null) {
+      throw new IllegalArgumentException("Patient not found: " + referral.getPatientId());
+    }
+
+    Clinician referredClinician = clinicianRepository.findById(referral.getReferredToClinicianId());
+    if (referredClinician == null) {
+      throw new IllegalArgumentException("Referred clinician not found: " + referral.getReferredToClinicianId());
+    }
+
     referralRepository.add(referral);
     processedReferrals.add(referral);
 
+    referralProcessingOutputWriter.writeReferralDetailsFile(referral);
+    referralProcessingOutputWriter.appendReferralEmailLog(referral, patient, referredClinician);
+    referralProcessingOutputWriter.appendElectronicHealthRecordUpdateLog(referral, patient);
+  }
+
+  public void updateReferral(Referral referral) {
+    Objects.requireNonNull(referral, "referral");
+
     Patient patient = patientRepository.findById(referral.getPatientId());
-    Clinician referringClinician = clinicianRepository.findById(referral.getReferringClinicianId());
+    if (patient == null) {
+      throw new IllegalArgumentException("Patient not found: " + referral.getPatientId());
+    }
+
     Clinician referredClinician = clinicianRepository.findById(referral.getReferredToClinicianId());
-    Facility referringFacility = facilityRepository.findById(referral.getReferringFacilityId());
-    Facility referredFacility = facilityRepository.findById(referral.getReferredToFacilityId());
+    if (referredClinician == null) {
+      throw new IllegalArgumentException("Referred clinician not found: " + referral.getReferredToClinicianId());
+    }
 
-    referralProcessingOutputWriter.writeReferralTextFile(
-        referral,
-        patient,
-        referringClinician,
-        referredClinician,
-        referringFacility,
-        referredFacility
-    );
+    referralRepository.update(referral);
 
-    referralProcessingOutputWriter.appendReferralEmailLog(
-        referral,
-        patient,
-        referredClinician
-    );
-
-    referralProcessingOutputWriter.appendElectronicHealthRecordUpdateLog(
-        referral,
-        patient
-    );
+    referralProcessingOutputWriter.writeReferralDetailsFile(referral);
+    referralProcessingOutputWriter.appendReferralEmailLog(referral, patient, referredClinician);
+    referralProcessingOutputWriter.appendElectronicHealthRecordUpdateLog(referral, patient);
   }
 
   public List<Referral> getProcessedReferrals() {

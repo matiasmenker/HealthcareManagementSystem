@@ -81,7 +81,6 @@ public class FacilitiesPanel extends JPanel {
       List<Facility> facilities = facilityController.getAllFacilities();
       facilitiesTableModel.setFacilities(facilities);
       buttonsActionsBar.setEditEnabled(facilitiesTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Facilities list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

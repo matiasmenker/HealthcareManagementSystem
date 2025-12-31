@@ -97,7 +97,6 @@ public class AppointmentsPanel extends JPanel {
       Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
       appointmentsTableModel.setAppointments(appointments, patientNamesByPatientId, clinicianNamesByClinicianId, facilityNamesByFacilityId);
       buttonsActionsBar.setEditEnabled(appointmentsTable.getSelectedRow() >= 0);
-      ActionFeedbackNotifier.showInformation(this, "Appointments list refreshed");
     } catch (RuntimeException exception) {
       JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }

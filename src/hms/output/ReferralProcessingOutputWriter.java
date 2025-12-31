@@ -1,109 +1,121 @@
 package hms.output;
 
 import hms.model.Clinician;
-import hms.model.Facility;
 import hms.model.Patient;
 import hms.model.Referral;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class ReferralProcessingOutputWriter {
 
   private final Path outputDirectory;
-  private final Path referralEmailsLogPath;
-  private final Path electronicHealthRecordUpdatesLogPath;
+  private final String emailLogFilename;
+  private final String ehrLogFilename;
 
   public ReferralProcessingOutputWriter(Path outputDirectory) {
-    if (outputDirectory == null) {
-      throw new IllegalArgumentException("outputDirectory is required");
-    }
     this.outputDirectory = outputDirectory;
-    this.referralEmailsLogPath = outputDirectory.resolve("referral_emails.log");
-    this.electronicHealthRecordUpdatesLogPath = outputDirectory.resolve("ehr_updates.log");
-    ensureOutputDirectoryExists();
+    this.emailLogFilename = "referral_emails.log";
+    this.ehrLogFilename = "ehr_updates.log";
   }
 
-  public void writeReferralTextFile(Referral referral,
-                                   Patient patient,
-                                   Clinician referringClinician,
-                                   Clinician referredClinician,
-                                   Facility referringFacility,
-                                   Facility referredFacility) {
-    String referralId = safe(referral.getId());
-    Path referralFilePath = outputDirectory.resolve("referral_" + referralId + ".txt");
+  public void writeReferralDetailsFile(Referral referral) {
+    try {
+      Files.createDirectories(outputDirectory);
+      Path outputFile = outputDirectory.resolve("referral_" + safe(referral.getId()) + ".txt");
 
-    String content =
-        "Referral Document\n"
-            + "Referral Identifier: " + referralId + "\n"
-            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + " (ID: " + safe(referral.getPatientId()) + ")\n"
-            + "Referring Clinician: " + safe(referringClinician == null ? "" : referringClinician.getFullName()) + " (ID: " + safe(referral.getReferringClinicianId()) + ")\n"
-            + "Referred Clinician: " + safe(referredClinician == null ? "" : referredClinician.getFullName()) + " (ID: " + safe(referral.getReferredToClinicianId()) + ")\n"
-            + "Referring Facility: " + safe(referringFacility == null ? "" : referringFacility.getName()) + " (ID: " + safe(referral.getReferringFacilityId()) + ")\n"
-            + "Referred Facility: " + safe(referredFacility == null ? "" : referredFacility.getName()) + " (ID: " + safe(referral.getReferredToFacilityId()) + ")\n"
-            + "Referral Date: " + safe(referral.getReferralDate()) + "\n"
-            + "Urgency Level: " + safe(referral.getUrgencyLevel()) + "\n"
-            + "Referral Reason: " + safe(referral.getReferralReason()) + "\n"
-            + "Clinical Summary: " + safe(referral.getClinicalSummary()) + "\n"
-            + "Requested Investigations: " + safe(referral.getRequestedInvestigations()) + "\n"
-            + "Notes: " + safe(referral.getNotes()) + "\n"
-            + "Status: " + (referral.getStatus() == null ? "" : referral.getStatus().name()) + "\n"
-            + "Created Date: " + safe(referral.getCreatedDate()) + "\n"
-            + "Last Updated: " + safe(referral.getLastUpdated()) + "\n";
+      String referralDetails =
+          "Referral Details\n"
+              + "Referral Identifier: " + safe(referral.getId()) + "\n"
+              + "Patient Identifier: " + safe(referral.getPatientId()) + "\n"
+              + "Referring Clinician Identifier: " + safe(referral.getReferringClinicianId()) + "\n"
+              + "Referred Clinician Identifier: " + safe(referral.getReferredToClinicianId()) + "\n"
+              + "Referring Facility Identifier: " + safe(referral.getReferringFacilityId()) + "\n"
+              + "Referred Facility Identifier: " + safe(referral.getReferredToFacilityId()) + "\n"
+              + "Referral Date: " + safe(referral.getReferralDate()) + "\n"
+              + "Urgency Level: " + safe(referral.getUrgencyLevel()) + "\n"
+              + "Referral Reason: " + safe(referral.getReferralReason()) + "\n"
+              + "Clinical Summary: " + safe(referral.getClinicalSummary()) + "\n"
+              + "Requested Investigations: " + safe(referral.getRequestedInvestigations()) + "\n"
+              + "Status: " + (referral.getStatus() == null ? "" : referral.getStatus().name()) + "\n"
+              + "Appointment Identifier: " + safe(referral.getAppointmentId()) + "\n"
+              + "Notes: " + safe(referral.getNotes()) + "\n"
+              + "Created Date: " + safe(referral.getCreatedDate()) + "\n"
+              + "Last Updated: " + safe(referral.getLastUpdated()) + "\n";
 
-    writeFile(referralFilePath, content);
+      try (FileWriter writer = new FileWriter(outputFile.toFile(), false)) {
+        writer.write(referralDetails);
+      }
+    } catch (IOException exception) {
+      throw new RuntimeException("Failed to write referral details file: " + exception.getMessage(), exception);
+    }
   }
 
   public void appendReferralEmailLog(Referral referral,
                                     Patient patient,
                                     Clinician referredClinician) {
+    String referralId = safe(referral.getId());
+    Path emailFilePath = outputDirectory.resolve("email_referral_" + referralId + ".txt");
+
     String logEntry =
         "Referral Email Notification\n"
-            + "Referral Identifier: " + safe(referral.getId()) + "\n"
-            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + "\n"
-            + "Recipient Clinician: " + safe(referredClinician == null ? "" : referredClinician.getFullName()) + "\n"
-            + "Message: A new referral has been created and requires your attention.\n"
-            + "\n";
+            + "Referral Identifier: " + referralId + "\n"
+            + "Timestamp: " + timestamp() + "\n"
+            + "From: noreply@hms.local\n"
+            + "To: " + safe(referredClinician.getEmail()) + "\n"
+            + "Subject: New Referral for " + safe(patient.getFullName()) + "\n"
+            + "Message: Please review referral " + referralId + " for patient " + safe(patient.getFullName()) + "\n";
 
-    appendFile(referralEmailsLogPath, logEntry);
+    writeTextFile(emailFilePath, logEntry);
+    appendToLogFile(emailLogFilename, logEntry);
   }
 
   public void appendElectronicHealthRecordUpdateLog(Referral referral,
                                                    Patient patient) {
+    String referralId = safe(referral.getId());
+    Path ehrFilePath = outputDirectory.resolve("ehr_update_" + referralId + ".txt");
+
     String logEntry =
         "Electronic Health Record Update\n"
-            + "Referral Identifier: " + safe(referral.getId()) + "\n"
-            + "Patient: " + safe(patient == null ? "" : patient.getFullName()) + "\n"
-            + "Update: Referral recorded in patient health record.\n"
-            + "\n";
+            + "Referral Identifier: " + referralId + "\n"
+            + "Patient Identifier: " + safe(patient.getId()) + "\n"
+            + "Timestamp: " + timestamp() + "\n"
+            + "Update: Referral created and sent for specialist review\n";
 
-    appendFile(electronicHealthRecordUpdatesLogPath, logEntry);
+    writeTextFile(ehrFilePath, logEntry);
+    appendToLogFile(ehrLogFilename, logEntry);
   }
 
-  private void ensureOutputDirectoryExists() {
+  private void writeTextFile(Path filePath, String content) {
     try {
       Files.createDirectories(outputDirectory);
+      try (FileWriter writer = new FileWriter(filePath.toFile(), false)) {
+        writer.write(content);
+      }
     } catch (IOException exception) {
-      throw new RuntimeException("Failed creating output directory: " + outputDirectory);
+      throw new RuntimeException("Failed to write output file: " + exception.getMessage(), exception);
     }
   }
 
-  private void writeFile(Path path, String content) {
+  private void appendToLogFile(String logFilename, String content) {
     try {
-      Files.writeString(path, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+      Files.createDirectories(outputDirectory);
+      Path logFile = outputDirectory.resolve(logFilename);
+      try (FileWriter writer = new FileWriter(logFile.toFile(), true)) {
+        writer.write(content);
+        writer.write("\n---\n");
+      }
     } catch (IOException exception) {
-      throw new RuntimeException("Failed writing file: " + path + " (" + exception.getMessage() + ")");
+      throw new RuntimeException("Failed to write log file: " + exception.getMessage(), exception);
     }
   }
 
-  private void appendFile(Path path, String content) {
-    try {
-      Files.writeString(path, content, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-    } catch (IOException exception) {
-      throw new RuntimeException("Failed appending file: " + path + " (" + exception.getMessage() + ")");
-    }
+  private String timestamp() {
+    return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
   }
 
   private String safe(String value) {
