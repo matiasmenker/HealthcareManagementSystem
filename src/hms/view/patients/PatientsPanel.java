@@ -32,13 +32,9 @@ public class PatientsPanel extends JPanel {
   private final JTable patientsTable;
   private final ButtonsActionsBar buttonsActionsBar;
 
-  public PatientsPanel(PatientController patientController) {
-    this(patientController, null);
-  }
-
   public PatientsPanel(PatientController patientController, FacilityController facilityController) {
     this.patientController = Objects.requireNonNull(patientController, "patientController");
-    this.facilityController = facilityController;
+    this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
 
     setLayout(new BorderLayout(10, 10));
     setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -91,32 +87,20 @@ public class PatientsPanel extends JPanel {
     }
   }
 
-  private Map<String, String> buildFacilityNamesByFacilityId() {
-    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
-    if (facilityController == null) {
-      return facilityNamesByFacilityId;
-    }
-
-    List<Facility> facilities = facilityController.getAllFacilities();
-    for (Facility facility : facilities) {
-      if (facility == null) {
-        continue;
-      }
-      String facilityId = safe(facility.getId());
-      if (facilityId.isEmpty()) {
-        continue;
-      }
-      facilityNamesByFacilityId.put(facilityId, safe(facility.getName()));
-    }
-
-    return facilityNamesByFacilityId;
-  }
-
   private void openAddPatientDialog() {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
-      List<FormFieldViewConfiguration> fieldViewConfigurations = buildPatientFieldViewConfigurationsForAdd();
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
+          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
+          FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
+      );
 
       FormDialog formDialog = new FormDialog(owner, "Add Patient", fieldViewConfigurations, Map.of());
       formDialog.setVisible(true);
@@ -131,8 +115,8 @@ public class PatientsPanel extends JPanel {
           valuesByKey.getOrDefault("patientId", ""),
           valuesByKey.getOrDefault("fullName", ""),
           valuesByKey.getOrDefault("email", ""),
-          "",
-          "",
+          valuesByKey.getOrDefault("nhsNumber", ""),
+          valuesByKey.getOrDefault("phone", ""),
           "",
           valuesByKey.getOrDefault("registeredFacilityId", "")
       );
@@ -161,12 +145,23 @@ public class PatientsPanel extends JPanel {
     try {
       Window owner = SwingUtilities.getWindowAncestor(this);
 
-      List<FormFieldViewConfiguration> fieldViewConfigurations = buildPatientFieldViewConfigurationsForEdit();
+      List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
+
+      List<FormFieldViewConfiguration> fieldViewConfigurations = List.of(
+          FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
+          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
+          FormFieldViewConfiguration.requiredEditable("email", "Email"),
+          FormFieldViewConfiguration.requiredEditable("nhsNumber", "NHS Number"),
+          FormFieldViewConfiguration.requiredEditable("phone", "Phone"),
+          FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
+      );
 
       Map<String, String> defaultValuesByKey = new LinkedHashMap<>();
       defaultValuesByKey.put("patientId", safe(selectedPatient.getId()));
       defaultValuesByKey.put("fullName", safe(selectedPatient.getFullName()));
       defaultValuesByKey.put("email", safe(selectedPatient.getEmail()));
+      defaultValuesByKey.put("nhsNumber", safe(selectedPatient.getNhsNumber()));
+      defaultValuesByKey.put("phone", safe(selectedPatient.getPhone()));
       defaultValuesByKey.put("registeredFacilityId", safe(selectedPatient.getRegisteredFacilityId()));
 
       FormDialog formDialog = new FormDialog(owner, "Edit Patient", fieldViewConfigurations, defaultValuesByKey);
@@ -182,8 +177,8 @@ public class PatientsPanel extends JPanel {
           selectedPatient.getId(),
           valuesByKey.getOrDefault("fullName", ""),
           valuesByKey.getOrDefault("email", ""),
-          safe(selectedPatient.getNhsNumber()),
-          safe(selectedPatient.getPhone()),
+          valuesByKey.getOrDefault("nhsNumber", ""),
+          valuesByKey.getOrDefault("phone", ""),
           safe(selectedPatient.getAddress()),
           valuesByKey.getOrDefault("registeredFacilityId", "")
       );
@@ -196,50 +191,24 @@ public class PatientsPanel extends JPanel {
     }
   }
 
-  private List<FormFieldViewConfiguration> buildPatientFieldViewConfigurationsForAdd() {
-    if (facilityController == null) {
-      return List.of(
-          FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
-          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-          FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("registeredFacilityId", "Registered Facility")
-      );
+  private Map<String, String> buildFacilityNamesByFacilityId() {
+    Map<String, String> facilityNamesByFacilityId = new LinkedHashMap<>();
+    List<Facility> facilities = facilityController.getAllFacilities();
+    for (Facility facility : facilities) {
+      if (facility == null) {
+        continue;
+      }
+      String facilityId = safe(facility.getId());
+      if (facilityId.isEmpty()) {
+        continue;
+      }
+      facilityNamesByFacilityId.put(facilityId, safe(facility.getName()));
     }
-
-    List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
-    return List.of(
-        FormFieldViewConfiguration.requiredEditable("patientId", "Patient ID"),
-        FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-        FormFieldViewConfiguration.requiredEditable("email", "Email"),
-        FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
-    );
-  }
-
-  private List<FormFieldViewConfiguration> buildPatientFieldViewConfigurationsForEdit() {
-    if (facilityController == null) {
-      return List.of(
-          FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
-          FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-          FormFieldViewConfiguration.requiredEditable("email", "Email"),
-          FormFieldViewConfiguration.requiredEditable("registeredFacilityId", "Registered Facility")
-      );
-    }
-
-    List<SelectionItem> facilityOptions = buildFacilitySelectionItems();
-    return List.of(
-        FormFieldViewConfiguration.requiredReadOnly("patientId", "Patient ID"),
-        FormFieldViewConfiguration.requiredEditable("fullName", "Full Name"),
-        FormFieldViewConfiguration.requiredEditable("email", "Email"),
-        FormFieldViewConfiguration.requiredSelect("registeredFacilityId", "Registered Facility", facilityOptions)
-    );
+    return facilityNamesByFacilityId;
   }
 
   private List<SelectionItem> buildFacilitySelectionItems() {
     List<SelectionItem> items = new java.util.ArrayList<>();
-    if (facilityController == null) {
-      return items;
-    }
-
     List<Facility> facilities = facilityController.getAllFacilities();
     for (Facility facility : facilities) {
       if (facility == null) {
@@ -250,7 +219,7 @@ public class PatientsPanel extends JPanel {
         continue;
       }
       String name = safe(facility.getName());
-      String label = name.isEmpty() ? ("Facility ID: " + id) : (name + " (ID: " + id + ")");
+      String label = name.isEmpty() ? id : (name + " (" + id + ")");
       items.add(new SelectionItem(id, label));
     }
     return items;
