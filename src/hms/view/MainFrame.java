@@ -53,7 +53,8 @@ public class MainFrame extends JFrame {
 		setLayout(new BorderLayout());
 
 		JTabbedPane tabbedPane = new JTabbedPane();
-		tabbedPane.addTab("Patients", new PatientsPanel(patientController, facilityController));
+		tabbedPane.addTab("Patients", new PatientsPanel(patientController, facilityController, appointmentController,
+				prescriptionController, referralController));
 		tabbedPane.addTab("Clinicians", new CliniciansPanel(clinicianController, facilityController));
 		tabbedPane.addTab("Appointments", new AppointmentsPanel(appointmentController, patientController,
 				clinicianController, facilityController));

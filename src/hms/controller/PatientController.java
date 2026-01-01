@@ -41,6 +41,13 @@ public class PatientController {
 		patientRepository.update(patient);
 	}
 
+	public void deletePatientById(String patientId) {
+		if (patientId == null || patientId.trim().isEmpty()) {
+			throw new IllegalArgumentException("Patient id is required");
+		}
+		patientRepository.deleteById(patientId.trim());
+	}
+
 	private void validatePatient(Patient patient) {
 		Objects.requireNonNull(patient, "patient");
 

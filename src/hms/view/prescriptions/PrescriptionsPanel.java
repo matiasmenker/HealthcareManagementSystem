@@ -66,6 +66,9 @@ public class PrescriptionsPanel extends JPanel {
 			}
 		});
 
+		buttonsActionsBar.setDeleteHandler(() -> openDeletePrescriptionDialog());
+		buttonsActionsBar.setDeleteEnabled(false);
+
 		buttonsActionsBar.setEditEnabled(false);
 
 		prescriptionsTable.getSelectionModel().addListSelectionListener(event -> {
@@ -74,6 +77,7 @@ public class PrescriptionsPanel extends JPanel {
 			}
 			boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
 			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
 		});
 
 		add(buttonsActionsBar, BorderLayout.NORTH);
@@ -89,7 +93,40 @@ public class PrescriptionsPanel extends JPanel {
 			Map<String, String> clinicianNamesByClinicianId = buildClinicianNamesByClinicianId();
 			prescriptionsTableModel.setPrescriptions(prescriptions, patientNamesByPatientId,
 					clinicianNamesByClinicianId);
-			buttonsActionsBar.setEditEnabled(prescriptionsTable.getSelectedRow() >= 0);
+			boolean hasSelection = prescriptionsTable.getSelectedRow() >= 0;
+			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
+		} catch (RuntimeException exception) {
+			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	private void openDeletePrescriptionDialog() {
+		int selectedRowIndex = prescriptionsTable.getSelectedRow();
+		if (selectedRowIndex < 0) {
+			JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		Prescription selectedPrescription = prescriptionsTableModel.getPrescriptionAtRow(selectedRowIndex);
+		if (selectedPrescription == null) {
+			JOptionPane.showMessageDialog(this, "Select a prescription to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		String prescriptionId = safe(selectedPrescription.getId());
+		int confirm = JOptionPane.showConfirmDialog(this, "Delete prescription " + prescriptionId + "?", "Delete",
+				JOptionPane.YES_NO_OPTION);
+		if (confirm != JOptionPane.YES_OPTION) {
+			return;
+		}
+
+		try {
+			prescriptionController.deletePrescription(selectedPrescription.getId());
+			refreshPrescriptionsTable();
+			ActionFeedbackNotifier.showSuccess(this, "Prescription deleted: " + prescriptionId);
 		} catch (RuntimeException exception) {
 			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}

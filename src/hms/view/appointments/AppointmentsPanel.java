@@ -71,6 +71,9 @@ public class AppointmentsPanel extends JPanel {
 			}
 		});
 
+		buttonsActionsBar.setDeleteHandler(() -> openDeleteAppointmentDialog());
+		buttonsActionsBar.setDeleteEnabled(false);
+
 		buttonsActionsBar.setEditEnabled(false);
 
 		appointmentsTable.getSelectionModel().addListSelectionListener(event -> {
@@ -79,6 +82,7 @@ public class AppointmentsPanel extends JPanel {
 			}
 			boolean hasSelection = appointmentsTable.getSelectedRow() >= 0;
 			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
 		});
 
 		add(buttonsActionsBar, BorderLayout.NORTH);
@@ -95,7 +99,9 @@ public class AppointmentsPanel extends JPanel {
 			Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
 			appointmentsTableModel.setAppointments(appointments, patientNamesByPatientId, clinicianNamesByClinicianId,
 					facilityNamesByFacilityId);
-			buttonsActionsBar.setEditEnabled(appointmentsTable.getSelectedRow() >= 0);
+			boolean hasSelection = appointmentsTable.getSelectedRow() >= 0;
+			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
 		} catch (RuntimeException exception) {
 			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
@@ -205,6 +211,37 @@ public class AppointmentsPanel extends JPanel {
 			refreshAppointmentsTable();
 			selectAppointmentById(updatedAppointment.getId());
 			ActionFeedbackNotifier.showSuccess(this, "Appointment updated: " + safe(updatedAppointment.getId()));
+		} catch (RuntimeException exception) {
+			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	private void openDeleteAppointmentDialog() {
+		int selectedRowIndex = appointmentsTable.getSelectedRow();
+		if (selectedRowIndex < 0) {
+			JOptionPane.showMessageDialog(this, "Select an appointment to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		Appointment selectedAppointment = appointmentsTableModel.getAppointmentAtRow(selectedRowIndex);
+		if (selectedAppointment == null) {
+			JOptionPane.showMessageDialog(this, "Select an appointment to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		String appointmentId = safe(selectedAppointment.getId());
+		int confirm = JOptionPane.showConfirmDialog(this, "Delete appointment " + appointmentId + "?", "Delete",
+				JOptionPane.YES_NO_OPTION);
+		if (confirm != JOptionPane.YES_OPTION) {
+			return;
+		}
+
+		try {
+			appointmentController.deleteAppointment(selectedAppointment.getId());
+			refreshAppointmentsTable();
+			ActionFeedbackNotifier.showSuccess(this, "Appointment deleted: " + appointmentId);
 		} catch (RuntimeException exception) {
 			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}

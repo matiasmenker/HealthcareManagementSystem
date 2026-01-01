@@ -1,9 +1,15 @@
 package hms.view.patients;
 
+import hms.controller.AppointmentController;
 import hms.controller.FacilityController;
 import hms.controller.PatientController;
+import hms.controller.PrescriptionController;
+import hms.controller.ReferralController;
+import hms.model.Appointment;
 import hms.model.Facility;
 import hms.model.Patient;
+import hms.model.Prescription;
+import hms.model.Referral;
 import hms.view.common.ActionFeedbackNotifier;
 import hms.view.common.ButtonsActionsBar;
 import hms.view.common.FormDialog;
@@ -28,14 +34,22 @@ public class PatientsPanel extends JPanel {
 
 	private final PatientController patientController;
 	private final FacilityController facilityController;
+	private final AppointmentController appointmentController;
+	private final PrescriptionController prescriptionController;
+	private final ReferralController referralController;
 
 	private final PatientsTableModel patientsTableModel;
 	private final JTable patientsTable;
 	private final ButtonsActionsBar buttonsActionsBar;
 
-	public PatientsPanel(PatientController patientController, FacilityController facilityController) {
+	public PatientsPanel(PatientController patientController, FacilityController facilityController,
+			AppointmentController appointmentController, PrescriptionController prescriptionController,
+			ReferralController referralController) {
 		this.patientController = Objects.requireNonNull(patientController, "patientController");
 		this.facilityController = Objects.requireNonNull(facilityController, "facilityController");
+		this.appointmentController = Objects.requireNonNull(appointmentController, "appointmentController");
+		this.prescriptionController = Objects.requireNonNull(prescriptionController, "prescriptionController");
+		this.referralController = Objects.requireNonNull(referralController, "referralController");
 
 		setLayout(new BorderLayout(10, 10));
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -62,6 +76,8 @@ public class PatientsPanel extends JPanel {
 		});
 
 		buttonsActionsBar.setEditEnabled(false);
+		buttonsActionsBar.setDeleteHandler(this::deleteSelectedPatient);
+		buttonsActionsBar.setDeleteEnabled(false);
 
 		patientsTable.getSelectionModel().addListSelectionListener(event -> {
 			if (event.getValueIsAdjusting()) {
@@ -69,6 +85,7 @@ public class PatientsPanel extends JPanel {
 			}
 			boolean hasSelection = patientsTable.getSelectedRow() >= 0;
 			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
 		});
 
 		add(buttonsActionsBar, BorderLayout.NORTH);
@@ -82,7 +99,9 @@ public class PatientsPanel extends JPanel {
 			List<Patient> patients = patientController.getAllPatients();
 			Map<String, String> facilityNamesByFacilityId = buildFacilityNamesByFacilityId();
 			patientsTableModel.setPatients(patients, facilityNamesByFacilityId);
-			buttonsActionsBar.setEditEnabled(patientsTable.getSelectedRow() >= 0);
+			boolean hasSelection = patientsTable.getSelectedRow() >= 0;
+			buttonsActionsBar.setEditEnabled(hasSelection);
+			buttonsActionsBar.setDeleteEnabled(hasSelection);
 		} catch (RuntimeException exception) {
 			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
@@ -180,6 +199,69 @@ public class PatientsPanel extends JPanel {
 		} catch (RuntimeException exception) {
 			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
+	}
+
+	private void deleteSelectedPatient() {
+		int selectedRowIndex = patientsTable.getSelectedRow();
+		if (selectedRowIndex < 0) {
+			JOptionPane.showMessageDialog(this, "Select a patient to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		Patient selectedPatient = patientsTableModel.getPatientAtRow(selectedRowIndex);
+		if (selectedPatient == null) {
+			JOptionPane.showMessageDialog(this, "Select a patient to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		String patientId = safe(selectedPatient.getId());
+		if (patientId.isEmpty()) {
+			JOptionPane.showMessageDialog(this, "Select a patient to delete.", "Delete",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		if (isPatientUsed(patientId)) {
+			JOptionPane.showMessageDialog(this, "Cannot delete patient because it is being used.", "Delete blocked",
+					JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		int confirm = JOptionPane.showConfirmDialog(this, "Delete patient " + patientId + "?", "Confirm delete",
+				JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+		if (confirm != JOptionPane.YES_OPTION) {
+			return;
+		}
+
+		try {
+			patientController.deletePatientById(patientId);
+			refreshPatientsTable();
+			ActionFeedbackNotifier.showSuccess(this, "Patient deleted: " + patientId);
+		} catch (RuntimeException exception) {
+			JOptionPane.showMessageDialog(this, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	private boolean isPatientUsed(String patientId) {
+		for (Appointment appointment : appointmentController.getAllAppointments()) {
+			if (appointment != null && patientId.equals(safe(appointment.getPatientId()))) {
+				return true;
+			}
+		}
+		for (Prescription prescription : prescriptionController.getAllPrescriptions()) {
+			if (prescription != null && patientId.equals(safe(prescription.getPatientId()))) {
+				return true;
+			}
+		}
+		for (Referral referral : referralController.getAllReferrals()) {
+			if (referral != null && patientId.equals(safe(referral.getPatientId()))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Map<String, String> buildFacilityNamesByFacilityId() {
